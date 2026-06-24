@@ -540,20 +540,23 @@ function initThree() {
     gridHelper.position.y = -2.5;
     scene.add(gridHelper);
 
-    // Floor Plane
-    const floorGeo = new THREE.PlaneGeometry(30, 30);
+    // Floor Plane (Wireframe to show objects falling below it)
+    const floorGeo = new THREE.PlaneGeometry(30, 30, 15, 15);
     const floorMat = new THREE.MeshStandardMaterial({
-        color: 0x090a0f,
+        color: 0x1e293b,
         roughness: 0.8,
-        metalness: 0.2
+        metalness: 0.2,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.4
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -2.51;
-    floor.receiveShadow = true;
+    floor.receiveShadow = false;
     scene.add(floor);
 
-    // Create 4 Nodes (Spheres)
+    // Create 4 Nodes (Spheres) - Hidden visually
     const sphereGeo = new THREE.SphereGeometry(0.22, 32, 32);
     for (let i = 0; i < 4; i++) {
         const material = new THREE.MeshStandardMaterial({
@@ -564,7 +567,8 @@ function initThree() {
             emissiveIntensity: 0.4
         });
         const sphere = new THREE.Mesh(sphereGeo, material);
-        sphere.castShadow = true;
+        sphere.castShadow = false;
+        sphere.visible = false; // Do not represent nodes visually
         scene.add(sphere);
         nodes.push(sphere);
     }
