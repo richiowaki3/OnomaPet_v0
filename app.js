@@ -943,11 +943,18 @@ function selectWord(word) {
     
     activeWord = word;
 
-    // Show metadata display
-    document.getElementById('info-section').style.display = 'flex';
-    document.getElementById('info-word').textContent = word.word;
-    document.getElementById('info-ipa').textContent = `[${word.ipa_clean || word.ipa_original}]`;
-    document.getElementById('info-rationale').textContent = word.rationale;
+    // Show metadata display (null-safe)
+    const infoSection = document.getElementById('info-section');
+    if (infoSection) infoSection.style.display = 'flex';
+
+    const infoWord = document.getElementById('info-word');
+    if (infoWord) infoWord.textContent = word.word;
+
+    const infoIpa = document.getElementById('info-ipa');
+    if (infoIpa) infoIpa.textContent = `[${word.ipa_clean || word.ipa_original}]`;
+
+    const infoRationale = document.getElementById('info-rationale');
+    if (infoRationale) infoRationale.textContent = word.rationale;
 
     // Set badges and sliders
     updateUIBadge('x1', word.effort.weight);
@@ -973,7 +980,8 @@ function selectWord(word) {
     const colorHex = word.extended.color_hex || '#6366f1';
     const color = new THREE.Color(colorHex);
     
-    document.getElementById('info-color-badge').style.backgroundColor = colorHex;
+    const colorBadge = document.getElementById('info-color-badge');
+    if (colorBadge) colorBadge.style.backgroundColor = colorHex;
 
     // Update material colors
     nodes.forEach(node => {
@@ -990,9 +998,11 @@ function selectWord(word) {
 
 function updateUIBadge(id, value) {
     const valEl = document.getElementById(`val-${id}`);
-    const fillEl = document.getElementById(`fill-${id}`);
-    if (valEl && fillEl) {
+    if (valEl) {
         valEl.textContent = value;
+    }
+    const fillEl = document.getElementById(`fill-${id}`);
+    if (fillEl) {
         const percentage = Math.min(Math.max((value / 9) * 100, 0), 100);
         fillEl.style.width = `${percentage}%`;
     }

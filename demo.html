@@ -21,7 +21,7 @@
             logBox.style.zIndex = '9999999';
             logBox.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
             logBox.style.pointerEvents = 'auto';
-            logBox.style.display = 'none'; // Hidden until error occurs
+            logBox.style.display = 'none';
             logBox.style.border = '1px solid rgba(255,255,255,0.2)';
             
             function logToScreen(msg, type = 'error') {
@@ -35,7 +35,6 @@
                 logBox.scrollTop = logBox.scrollHeight;
             }
 
-            // Intercept console.error
             const oldConsoleError = console.error;
             console.error = function() {
                 const args = Array.from(arguments);
@@ -43,7 +42,6 @@
                 oldConsoleError.apply(console, arguments);
             };
 
-            // Catch runtime and resource loading errors (capture phase)
             window.addEventListener('error', function(e) {
                 let msg = '';
                 if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
@@ -56,16 +54,14 @@
                 }
                 logToScreen(msg, 'runtime');
                 alert("🚨 OnomaPet Debug Alert:\n\n" + msg);
-            }, true); // useCapture = true is vital to catch resource load errors
+            }, true);
 
-            // Catch promise rejections
             window.addEventListener('unhandledrejection', function(e) {
                 const msg = `Promise rejected: ${e.reason}`;
                 logToScreen(msg, 'promise');
                 alert("🚨 OnomaPet Debug Alert:\n\n" + msg);
             });
 
-            // Append log box when DOM is ready
             window.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(logBox);
             });
@@ -73,7 +69,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OnomaPet 00 - 3D Onomatopoeia Motion Demo</title>
+    <title>OnomaPet v.0</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,15 +78,12 @@
     <style>
         :root {
             --bg-color: #0b0c10;
-            --panel-bg: rgba(15, 23, 42, 0.65);
+            --panel-bg: rgba(15, 23, 42, 0.7);
             --panel-border: rgba(255, 255, 255, 0.08);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
-            --accent-glow: rgba(99, 102, 241, 0.5);
             --accent-color: #6366f1;
             --accent-hover: #4f46e5;
-            --danger-color: #ef4444;
-            --danger-hover: #dc2626;
             --card-radius: 16px;
         }
 
@@ -109,7 +102,6 @@
             width: 100vw;
         }
 
-        /* 3D Canvas container */
         #canvas-container {
             position: absolute;
             top: 0;
@@ -119,7 +111,6 @@
             z-index: 1;
         }
 
-        /* UI Overlay */
         .ui-overlay {
             position: absolute;
             top: 0;
@@ -128,59 +119,43 @@
             height: 100%;
             z-index: 10;
             pointer-events: none;
-            display: grid;
-            grid-template-columns: 420px 1fr;
-            padding: 24px;
-            gap: 24px;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
         }
 
-        /* Control Panel */
         .control-panel {
+            width: 100%;
+            max-width: 380px;
+            height: fit-content;
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--panel-border);
             border-radius: var(--card-radius);
-            padding: 32px 28px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 16px;
             pointer-events: auto;
-            max-height: calc(100vh - 48px);
-            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
                         0 1px 3px rgba(255, 255, 255, 0.05) inset;
         }
 
-        /* Custom Scrollbar for panel */
-        .control-panel::-webkit-scrollbar {
-            width: 6px;
-        }
-        .control-panel::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .control-panel::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        .control-panel::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
+        @media (min-width: 600px) {
+            .ui-overlay {
+                justify-content: flex-start;
+                padding: 24px;
+            }
         }
 
         .header h1 {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 800;
             letter-spacing: -0.5px;
             background: linear-gradient(135deg, #a5b4fc, #6366f1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 4px;
-        }
-
-        .header p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 300;
         }
 
         .input-group {
@@ -189,17 +164,9 @@
             gap: 8px;
         }
 
-        .input-group label {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-        }
-
         .input-row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         input[type="text"] {
@@ -207,10 +174,10 @@
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--panel-border);
             border-radius: 8px;
-            padding: 12px 16px;
+            padding: 10px 12px;
             color: var(--text-primary);
             font-family: inherit;
-            font-size: 16px;
+            font-size: 15px;
             outline: none;
             transition: all 0.3s ease;
         }
@@ -236,27 +203,22 @@
         .btn-primary {
             background: var(--accent-color);
             color: white;
-            padding: 12px 24px;
-            font-size: 15px;
+            padding: 10px 18px;
+            font-size: 14px;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
         .btn-primary:hover {
             background: var(--accent-hover);
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(1px);
         }
 
         .btn-secondary {
             background: transparent;
             border: 1px solid var(--panel-border);
             color: var(--text-secondary);
-            padding: 12px 16px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 13px;
         }
 
         .btn-secondary:hover {
@@ -265,143 +227,65 @@
             background: rgba(255, 255, 255, 0.03);
         }
 
-        /* Info Display Section */
+        /* Simplified parameter display */
         .info-section {
             border-top: 1px solid var(--panel-border);
-            padding-top: 20px;
+            padding-top: 16px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-        }
-
-        .word-title-row {
-            display: flex;
-            align-items: baseline;
             gap: 12px;
         }
 
-        .active-word {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--text-primary);
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
         }
 
-        .active-ipa {
-            font-size: 16px;
+        @media (max-width: 380px) {
+            .param-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .param-item {
+            font-size: 11px;
             color: var(--text-secondary);
-            font-style: italic;
-            font-family: monospace;
-        }
-
-        .word-rationale {
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-            background: rgba(0, 0, 0, 0.2);
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 3px solid var(--accent-color);
-        }
-
-        /* Dimension Category List */
-        .dimension-groups {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .dim-category {
             background: rgba(255, 255, 255, 0.02);
+            padding: 6px 8px;
+            border-radius: 6px;
             border: 1px solid rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            padding: 12px;
-        }
-
-        .dim-cat-title {
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
         }
 
-        .dim-cat-letter {
-            color: var(--accent-color);
-        }
-
-        .dim-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
-
-        .dim-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .dim-name {
-            color: var(--text-secondary);
-        }
-
-        .dim-value-bar {
-            width: 120px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 3px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .dim-value-fill {
-            height: 100%;
-            background: var(--accent-color);
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.5s ease-out;
-        }
-
-        .dim-value-text {
-            width: 24px;
-            text-align: right;
-            font-weight: 600;
-            font-size: 11px;
+        .param-item span {
             color: var(--text-primary);
+            font-weight: 600;
         }
 
-        /* Instructions overlay */
         .instructions {
             position: absolute;
-            bottom: 24px;
-            right: 24px;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--panel-border);
             border-radius: 20px;
-            padding: 10px 18px;
+            padding: 6px 14px;
             pointer-events: auto;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            z-index: 10;
         }
 
         .instructions span {
             color: var(--text-primary);
             font-weight: 600;
-        }
-
-        .color-preview-badge {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            vertical-align: middle;
         }
     </style>
 </head>
@@ -414,194 +298,53 @@
     <div class="ui-overlay">
         <!-- Control Panel -->
         <div class="control-panel">
-            <div class="header" style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h1 style="margin: 0;">OnomaPet 00</h1>
-                    <span style="font-size: 10px; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Sound Eng</span>
-                </div>
-                <p>3D Onomatopoeia Motion & Sound Engine</p>
+            <div class="header">
+                <h1>OnomaPet v.0</h1>
             </div>
 
             <!-- Input Group -->
             <div class="input-group">
-                <label for="onomato-input">オノマトペ入力 / Input Word</label>
                 <div class="input-row">
-                    <input type="text" id="onomato-input" placeholder="例: ふわふわ, あたふた..." list="onomato-list" autocomplete="off">
+                    <input type="text" id="onomato-input" placeholder="例: ふわふわ, ぱっ..." list="onomato-list" autocomplete="off">
                     <datalist id="onomato-list"></datalist>
                     <button class="btn-primary" id="btn-execute">実行</button>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 4px;">
-                    <button class="btn-secondary" id="btn-reset" style="flex: 1; padding: 8px 12px; font-size: 12px;">リセット</button>
-                    <button class="btn-secondary" id="btn-random" style="flex: 1; padding: 8px 12px; font-size: 12px;">ランダム</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-secondary" id="btn-random" style="flex: 1;">ランダム</button>
+                    <button class="btn-secondary" id="btn-reset" style="flex: 1;">リセット</button>
                 </div>
             </div>
 
-            <!-- Active Info -->
+            <!-- Active Parameters -->
             <div class="info-section" id="info-section" style="display: none;">
-                <div class="word-title-row">
-                    <span class="active-word" id="info-word">ふわふわ</span>
-                    <span class="active-ipa" id="info-ipa">[ɸuɰaɸuɰa]</span>
-                    <span class="color-preview-badge" id="info-color-badge"></span>
-                </div>
-                
-                <div class="word-rationale" id="info-rationale">
-                    気流的な摩擦と丸みのある母音による浮遊感のある表現。
-                </div>
-
-                <!-- Dimension Category Lists -->
-                <div class="dimension-groups">
-                    <!-- Cat A -->
-                    <div class="dim-category">
-                        <div class="dim-cat-title">
-                            <span>Laban Effort</span>
-                            <span class="dim-cat-letter">Cat A</span>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Weight (x1)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x1"></div></div>
-                                <span class="dim-value-text" id="val-x1">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Time (x2)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x2"></div></div>
-                                <span class="dim-value-text" id="val-x2">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Space (x3)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x3"></div></div>
-                                <span class="dim-value-text" id="val-x3">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Flow (x4)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x4"></div></div>
-                                <span class="dim-value-text" id="val-x4">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cat B -->
-                    <div class="dim-category">
-                        <div class="dim-cat-title">
-                            <span>Acoustic Physics</span>
-                            <span class="dim-cat-letter">Cat B</span>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Hardness (x5)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x5"></div></div>
-                                <span class="dim-value-text" id="val-x5">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Moisture (x6)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x6"></div></div>
-                                <span class="dim-value-text" id="val-x6">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Frequency (x7)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x7"></div></div>
-                                <span class="dim-value-text" id="val-x7">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Decay (x8)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x8"></div></div>
-                                <span class="dim-value-text" id="val-x8">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cat C -->
-                    <div class="dim-category">
-                        <div class="dim-cat-title">
-                            <span>Extended Sensory</span>
-                            <span class="dim-cat-letter">Cat C</span>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Reynolds (x9)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x9"></div></div>
-                                <span class="dim-value-text" id="val-x9">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Boyle (x10)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x10"></div></div>
-                                <span class="dim-value-text" id="val-x10">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Temperature (x11)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x11"></div></div>
-                                <span class="dim-value-text" id="val-x11">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cat D -->
-                    <div class="dim-category">
-                        <div class="dim-cat-title">
-                            <span>Phrasing & Meter</span>
-                            <span class="dim-cat-letter">Cat D</span>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Accent (x13)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x13"></div></div>
-                                <span class="dim-value-text" id="val-x13">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Contour (x14)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x14"></div></div>
-                                <span class="dim-value-text" id="val-x14">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Meter (x15)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x15"></div></div>
-                                <span class="dim-value-text" id="val-x15">0</span>
-                            </div>
-                        </div>
-                        <div class="dim-row">
-                            <span class="dim-name">Regularity (x16)</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div class="dim-value-bar"><div class="dim-value-fill" id="fill-x16"></div></div>
-                                <span class="dim-value-text" id="val-x16">0</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="param-grid">
+                    <div class="param-item">重さ: <span id="val-x1">0</span></div>
+                    <div class="param-item">時間: <span id="val-x2">0</span></div>
+                    <div class="param-item">空間: <span id="val-x3">0</span></div>
+                    <div class="param-item">流れ: <span id="val-x4">0</span></div>
+                    <div class="param-item">硬さ: <span id="val-x5">0</span></div>
+                    <div class="param-item">湿気: <span id="val-x6">0</span></div>
+                    <div class="param-item">音高: <span id="val-x7">0</span></div>
+                    <div class="param-item">減衰: <span id="val-x8">0</span></div>
+                    <div class="param-item">摩擦: <span id="val-x9">0</span></div>
+                    <div class="param-item">歪み: <span id="val-x10">0</span></div>
+                    <div class="param-item">温度: <span id="val-x11">0</span></div>
+                    <div class="param-item">強弱: <span id="val-x13">0</span></div>
+                    <div class="param-item">音調: <span id="val-x14">0</span></div>
+                    <div class="param-item">拍数: <span id="val-x15">0</span></div>
+                    <div class="param-item">規則: <span id="val-x16">0</span></div>
                 </div>
             </div>
         </div>
-        
-        <div></div> <!-- Empty right column -->
     </div>
 
     <div class="instructions">
-        ドラッグで<span>回転</span> | スクロールで<span>ズーム</span> | 右ドラッグで<span>平行移動</span>
+        ドラッグで<span>回転</span> | ピンチで<span>ズーム</span>
     </div>
 
     <script src="three.min.js?v=2"></script>
     <script src="OrbitControls.js?v=2"></script>
-    <!-- Load pre-built local dictionary JS -->
     <script src="onomatopoeia_dictionary.js?v=2"></script>
-    <!-- Load App logic -->
     <script src="app.js?v=5"></script>
 </body>
 </html>
