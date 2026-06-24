@@ -868,7 +868,7 @@ function initUI() {
     const list = document.getElementById('onomato-list');
     const input = document.getElementById('onomato-input');
     const btnExecute = document.getElementById('btn-execute');
-    const btnReset = document.getElementById('btn-reset');
+    const btnClear = document.getElementById('btn-clear');
     const btnRandom = document.getElementById('btn-random');
 
     // Populate suggestions
@@ -906,13 +906,17 @@ function initUI() {
         }
     });
 
-    // Reset to baseline
-    btnReset.addEventListener('click', () => {
-        initAudioOnInteraction();
-        activeWord = null;
-        document.getElementById('info-section').style.display = 'none';
-        resetNodesToBaseline();
-    });
+    // Reset / Clear input
+    if (btnClear) {
+        btnClear.addEventListener('click', () => {
+            initAudioOnInteraction();
+            input.value = '';
+            activeWord = null;
+            const infoSec = document.getElementById('info-section');
+            if (infoSec) infoSec.style.display = 'none';
+            resetNodesToBaseline();
+        });
+    }
 
     // Pick random word
     btnRandom.addEventListener('click', () => {

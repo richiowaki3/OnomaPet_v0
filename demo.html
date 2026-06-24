@@ -17,7 +17,7 @@
             logBox.style.fontFamily = 'monospace';
             logBox.style.fontSize = '12px';
             logBox.style.padding = '20px';
-            logBox.style.borderRadius = '10px';
+            logBox.style.borderRadius = '0';
             logBox.style.zIndex = '9999999';
             logBox.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
             logBox.style.pointerEvents = 'auto';
@@ -84,7 +84,6 @@
             --text-secondary: #94a3b8;
             --accent-color: #6366f1;
             --accent-hover: #4f46e5;
-            --card-radius: 16px;
         }
 
         * {
@@ -121,41 +120,51 @@
             pointer-events: none;
             display: flex;
             justify-content: center;
-            padding: 16px;
+            padding: 12px;
         }
 
         .control-panel {
             width: 100%;
-            max-width: 380px;
+            max-width: 360px;
             height: fit-content;
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--panel-border);
-            border-radius: var(--card-radius);
-            padding: 20px;
+            border-radius: 0; /* Square corners */
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             pointer-events: auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 
-                        0 1px 3px rgba(255, 255, 255, 0.05) inset;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         @media (min-width: 600px) {
             .ui-overlay {
                 justify-content: flex-start;
-                padding: 24px;
+                padding: 20px;
             }
         }
 
         .header h1 {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
             letter-spacing: -0.5px;
             background: linear-gradient(135deg, #a5b4fc, #6366f1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .header .author-name {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-left: 8px;
+            letter-spacing: 0px;
+            -webkit-text-fill-color: var(--text-secondary);
         }
 
         .input-group {
@@ -166,51 +175,63 @@
 
         .input-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
 
         input[type="text"] {
             flex: 1;
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 10px 12px;
+            border-radius: 0; /* Square corners */
+            padding: 8px 10px;
             color: var(--text-primary);
             font-family: inherit;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
             transition: all 0.3s ease;
         }
 
         input[type="text"]:focus {
             border-color: var(--accent-color);
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
         }
 
         button {
             cursor: pointer;
             border: none;
-            border-radius: 8px;
+            border-radius: 0; /* Square corners */
             font-family: inherit;
             font-weight: 600;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s ease-in-out;
             outline: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
 
+        .btn-clear {
+            background: transparent;
+            border: 1px solid var(--panel-border);
+            color: var(--text-secondary);
+            width: 34px;
+            height: 34px;
+            font-size: 13px;
+        }
+
+        .btn-clear:hover {
+            color: var(--text-primary);
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
         .btn-primary {
             background: var(--accent-color);
             color: white;
-            padding: 10px 18px;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            padding: 8px 16px;
+            font-size: 13px;
         }
 
         .btn-primary:hover {
             background: var(--accent-hover);
-            transform: translateY(-1px);
         }
 
         .btn-secondary {
@@ -218,7 +239,7 @@
             border: 1px solid var(--panel-border);
             color: var(--text-secondary);
             padding: 8px 12px;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .btn-secondary:hover {
@@ -227,56 +248,58 @@
             background: rgba(255, 255, 255, 0.03);
         }
 
-        /* Simplified parameter display */
+        /* Minimized Single-Container Parameters display */
         .info-section {
             border-top: 1px solid var(--panel-border);
-            padding-top: 16px;
+            padding-top: 10px;
+        }
+
+        .param-container {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 10px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 6px;
         }
 
-        .param-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+        .param-cat {
+            font-size: 10px;
+            line-height: 1.2;
         }
 
-        @media (max-width: 380px) {
-            .param-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .cat-header {
+            color: #818cf8;
+            font-weight: 700;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
         }
 
-        .param-item {
-            font-size: 11px;
+        .cat-body {
             color: var(--text-secondary);
-            background: rgba(255, 255, 255, 0.02);
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            display: flex;
-            justify-content: space-between;
+            font-family: monospace;
         }
 
-        .param-item span {
+        .cat-body span {
             color: var(--text-primary);
             font-weight: 600;
         }
 
         .instructions {
             position: absolute;
-            bottom: 16px;
+            bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--panel-border);
-            border-radius: 20px;
-            padding: 6px 14px;
+            border-radius: 0; /* Square corners */
+            padding: 4px 10px;
             pointer-events: auto;
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-secondary);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             white-space: nowrap;
@@ -299,40 +322,58 @@
         <!-- Control Panel -->
         <div class="control-panel">
             <div class="header">
-                <h1>OnomaPet v.0</h1>
+                <h1>OnomaPet v.0<span class="author-name">by Richi Owaki</span></h1>
             </div>
 
             <!-- Input Group -->
             <div class="input-group">
                 <div class="input-row">
+                    <button class="btn-clear" id="btn-clear">X</button>
                     <input type="text" id="onomato-input" placeholder="例: ふわふわ, ぱっ..." list="onomato-list" autocomplete="off">
                     <datalist id="onomato-list"></datalist>
                     <button class="btn-primary" id="btn-execute">実行</button>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-secondary" id="btn-random" style="flex: 1;">ランダム</button>
-                    <button class="btn-secondary" id="btn-reset" style="flex: 1;">リセット</button>
-                </div>
+                <button class="btn-secondary" id="btn-random" style="width: 100%;">ランダム</button>
             </div>
 
-            <!-- Active Parameters -->
+            <!-- Active Parameters (Unified Container) -->
             <div class="info-section" id="info-section" style="display: none;">
-                <div class="param-grid">
-                    <div class="param-item">重さ: <span id="val-x1">0</span></div>
-                    <div class="param-item">時間: <span id="val-x2">0</span></div>
-                    <div class="param-item">空間: <span id="val-x3">0</span></div>
-                    <div class="param-item">流れ: <span id="val-x4">0</span></div>
-                    <div class="param-item">硬さ: <span id="val-x5">0</span></div>
-                    <div class="param-item">湿気: <span id="val-x6">0</span></div>
-                    <div class="param-item">音高: <span id="val-x7">0</span></div>
-                    <div class="param-item">減衰: <span id="val-x8">0</span></div>
-                    <div class="param-item">摩擦: <span id="val-x9">0</span></div>
-                    <div class="param-item">歪み: <span id="val-x10">0</span></div>
-                    <div class="param-item">温度: <span id="val-x11">0</span></div>
-                    <div class="param-item">強弱: <span id="val-x13">0</span></div>
-                    <div class="param-item">音調: <span id="val-x14">0</span></div>
-                    <div class="param-item">拍数: <span id="val-x15">0</span></div>
-                    <div class="param-item">規則: <span id="val-x16">0</span></div>
+                <div class="param-container">
+                    <div class="param-cat">
+                        <div class="cat-header">Cat A: Laban Effort</div>
+                        <div class="cat-body">
+                            重さ(x1): <span id="val-x1">0</span> | 
+                            時間(x2): <span id="val-x2">0</span> | 
+                            空間(x3): <span id="val-x3">0</span> | 
+                            流れ(x4): <span id="val-x4">0</span>
+                        </div>
+                    </div>
+                    <div class="param-cat">
+                        <div class="cat-header">Cat B: Acoustic Physics</div>
+                        <div class="cat-body">
+                            硬さ(x5): <span id="val-x5">0</span> | 
+                            湿気(x6): <span id="val-x6">0</span> | 
+                            音高(x7): <span id="val-x7">0</span> | 
+                            減衰(x8): <span id="val-x8">0</span>
+                        </div>
+                    </div>
+                    <div class="param-cat">
+                        <div class="cat-header">Cat C: Extended Sensory</div>
+                        <div class="cat-body">
+                            摩擦(x9): <span id="val-x9">0</span> | 
+                            歪み(x10): <span id="val-x10">0</span> | 
+                            温度(x11): <span id="val-x11">0</span>
+                        </div>
+                    </div>
+                    <div class="param-cat">
+                        <div class="cat-header">Cat D: Phrasing & Meter</div>
+                        <div class="cat-body">
+                            強弱(x13): <span id="val-x13">0</span> | 
+                            音調(x14): <span id="val-x14">0</span> | 
+                            拍数(x15): <span id="val-x15">0</span> | 
+                            規則(x16): <span id="val-x16">0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
