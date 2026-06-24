@@ -610,6 +610,259 @@ function initThree() {
     window.addEventListener('resize', onWindowResize);
 }
 
+// Levenshtein distance helper to find closest words in corpus
+function levenshteinDistance(str1, str2) {
+    const track = Array(str2.length + 1).fill(null).map(() =>
+        Array(str1.length + 1).fill(null));
+    for (let i = 0; i <= str1.length; i += 1) {
+        track[0][i] = i;
+    }
+    for (let j = 0; j <= str2.length; j += 1) {
+        track[j][0] = j;
+    }
+    for (let j = 1; j <= str2.length; j += 1) {
+        for (let i = 1; i <= str1.length; i += 1) {
+            const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+            track[j][i] = Math.min(
+                track[j][i - 1] + 1, // deletion
+                track[j - 1][i] + 1, // insertion
+                track[j - 1][i - 1] + indicator // substitution
+            );
+        }
+    }
+    return track[str2.length][str1.length];
+}
+
+// Predict phonetic, acoustic and physical parameters for unregistered words
+function estimateWordParameters(query) {
+    let est = {
+        effort: { weight: 5.0, time: 5.0, space: 5.0, flow: 5.0 },
+        acoustic: { hardness: 5.0, moisture: 5.0, freq_norm: 5.0, decay: 5.0, freq_hz: 0 },
+        extended: { reynolds_norm: 5.0, boyle: 5.0, temp_ord: 5.0, color_hex: "#6366f1" },
+        phrasing: { accent: 5.0, contour: 5.0, meter: 4, regularity: 5 }
+    };
+    
+    let weightOffset = 0;
+    let timeOffset = 0;
+    let spaceOffset = 0;
+    let flowOffset = 0;
+    let hardnessOffset = 0;
+    let moistureOffset = 0;
+    let freqOffset = 0;
+    let decayOffset = 0;
+    let reynoldsOffset = 0;
+    let boyleOffset = 0;
+    let tempOffset = 0;
+    
+    const len = query.length;
+    if (len === 0) return est;
+    
+    for (let i = 0; i < len; i++) {
+        const char = query[i];
+        
+        // Consonant features (Sound Symbolism)
+        if (/[がぎぐげござじずぜぞだぢづでどばびぶべぼガギグゲゴザジズゼゾダヂヅデドバビブベボ]/.test(char)) {
+            weightOffset += 1.8;
+            hardnessOffset += 1.2;
+            reynoldsOffset += 1.5;
+            freqOffset -= 1.5;
+            boyleOffset += 1.5;
+            tempOffset += 0.5;
+        } else if (/[ぱぴぷぺぽパピプペポ]/.test(char)) {
+            hardnessOffset += 1.5;
+            timeOffset += 1.5;
+            weightOffset += 0.2;
+            boyleOffset += 0.5;
+        } else if (/[さしすせそざじずぜぞつちサシスセソザジズゼゾツチ]/.test(char)) {
+            reynoldsOffset += 2.0;
+            flowOffset += 0.5;
+        } else if (/[まみむめもなにぬねのらりるれろわマミムメモナニヌネノラリルレロワ]/.test(char)) {
+            flowOffset += 1.5;
+            hardnessOffset -= 1.0;
+            moistureOffset += 1.0;
+        }
+        
+        // Vowel features
+        if (/[あかさたなはまやらわがざだばぱアカサタナハマヤラワガザダバパァヵ]/.test(char)) {
+            spaceOffset += 1.0;
+            freqOffset -= 0.5;
+            tempOffset += 0.8;
+        } else if (/[いきしちにひみりぎじぢびぴイキシチニヒミリギジヂビピィ]/.test(char)) {
+            spaceOffset -= 1.5;
+            freqOffset += 2.0;
+            tempOffset -= 1.0;
+            hardnessOffset += 0.5;
+        } else if (/[うくすつぬふむゆるぐずづぶぷウクスツヌフムユルグズヅブプゥ]/.test(char)) {
+            spaceOffset -= 0.5;
+            freqOffset -= 0.2;
+            tempOffset -= 0.2;
+        } else if (/[おこそとのほもよろごぞどぼぽオコソトノホモヨロゴゾドボポォ]/.test(char)) {
+            spaceOffset += 1.5;
+            freqOffset -= 1.0;
+            weightOffset += 0.8;
+            tempOffset += 0.4;
+        }
+        
+        // Special moras
+        if (char === 'っ' || char === 'ッ') {
+            timeOffset += 3.0;
+            decayOffset += 3.0;
+            hardnessOffset += 1.0;
+        } else if (char === 'ん' || char === 'ン') {
+            moistureOffset += 2.0;
+            flowOffset += 1.0;
+            decayOffset -= 1.0;
+        } else if (char === 'ー') {
+            timeOffset -= 2.5;
+            decayOffset -= 3.0;
+            flowOffset += 1.5;
+        }
+    }
+    
+    // Average offsets over word length to keep scaling balanced
+    const scale = Math.sqrt(len);
+    est.effort.weight = Math.min(Math.max(5.0 + weightOffset / scale, 1.0), 9.0);
+    est.effort.time = Math.min(Math.max(5.0 + timeOffset / scale, 1.0), 9.0);
+    est.effort.space = Math.min(Math.max(5.0 + spaceOffset / scale, 1.0), 9.0);
+    est.effort.flow = Math.min(Math.max(5.0 + flowOffset / scale, 1.0), 9.0);
+    
+    est.acoustic.hardness = Math.min(Math.max(5.0 + hardnessOffset / scale, 1.0), 9.0);
+    est.acoustic.moisture = Math.min(Math.max(5.0 + moistureOffset / scale, 1.0), 9.0);
+    est.acoustic.freq_norm = Math.min(Math.max(5.0 + freqOffset / scale, 1.0), 9.0);
+    est.acoustic.decay = Math.min(Math.max(5.0 + decayOffset / scale, 1.0), 9.0);
+    
+    est.extended.reynolds_norm = Math.min(Math.max(5.0 + reynoldsOffset / scale, 1.0), 9.0);
+    est.extended.boyle = Math.min(Math.max(5.0 + boyleOffset / scale, 1.0), 9.0);
+    est.extended.temp_ord = Math.min(Math.max(5.0 + tempOffset / scale, 1.0), 9.0);
+    
+    est.acoustic.freq_hz = 130.0 * Math.pow(1.5, est.acoustic.freq_norm * 0.33);
+    
+    // Set Meter based on repeating patterns (reduplication)
+    const halfLen = Math.floor(len / 2);
+    const firstHalf = query.substring(0, halfLen);
+    const secondHalf = query.substring(halfLen);
+    if (firstHalf === secondHalf && len >= 4) {
+        est.phrasing.meter = 6;
+        est.phrasing.regularity = 7;
+    } else if (/[っッ]/.test(query)) {
+        est.phrasing.meter = 2;
+        est.phrasing.regularity = 8;
+    } else {
+        est.phrasing.meter = 4;
+        est.phrasing.regularity = 5;
+    }
+    
+    est.phrasing.accent = est.effort.weight;
+    est.phrasing.contour = Math.min(Math.max(5.0 - freqOffset / scale, 1.0), 9.0);
+    
+    // 3. Find 3 Nearest Neighbors in Corpus (using Levenshtein)
+    let candidates = ONOMA_DICT.map(item => {
+        return {
+            item: item,
+            dist: levenshteinDistance(query, item.word)
+        };
+    });
+    
+    candidates.sort((a, b) => a.dist - b.dist);
+    const neighbors = candidates.slice(0, 3);
+    
+    // Blend neighbor average with phonetic estimation
+    if (neighbors.length > 0) {
+        let avg = {
+            weight: 0, time: 0, space: 0, flow: 0,
+            hardness: 0, moisture: 0, freq_norm: 0, decay: 0,
+            reynolds: 0, boyle: 0, temp: 0
+        };
+        
+        let totalWeight = 0;
+        neighbors.forEach(n => {
+            const w_n = 1.0 / (n.dist + 1);
+            totalWeight += w_n;
+            avg.weight += n.item.effort.weight * w_n;
+            avg.time += n.item.effort.time * w_n;
+            avg.space += n.item.effort.space * w_n;
+            avg.flow += n.item.effort.flow * w_n;
+            
+            avg.hardness += n.item.acoustic.hardness * w_n;
+            avg.moisture += n.item.acoustic.moisture * w_n;
+            avg.freq_norm += n.item.acoustic.freq_norm * w_n;
+            avg.decay += n.item.acoustic.decay * w_n;
+            
+            avg.reynolds += n.item.extended.reynolds_norm * w_n;
+            avg.boyle += (n.item.extended.boyle || 0) * w_n;
+            avg.temp += n.item.extended.temp_ord * w_n;
+        });
+        
+        avg.weight /= totalWeight;
+        avg.time /= totalWeight;
+        avg.space /= totalWeight;
+        avg.flow /= totalWeight;
+        avg.hardness /= totalWeight;
+        avg.moisture /= totalWeight;
+        avg.freq_norm /= totalWeight;
+        avg.decay /= totalWeight;
+        avg.reynolds /= totalWeight;
+        avg.boyle /= totalWeight;
+        avg.temp /= totalWeight;
+        
+        const closestDist = neighbors[0].dist;
+        let neighborBlendRatio = 0.65;
+        if (closestDist > 3) {
+            neighborBlendRatio = 0.25; // Far neighbors, rely mostly on rules
+        } else if (closestDist === 0) {
+            neighborBlendRatio = 1.0;
+        }
+        
+        const ruleRatio = 1.0 - neighborBlendRatio;
+        
+        est.effort.weight = est.effort.weight * ruleRatio + avg.weight * neighborBlendRatio;
+        est.effort.time = est.effort.time * ruleRatio + avg.time * neighborBlendRatio;
+        est.effort.space = est.effort.space * ruleRatio + avg.space * neighborBlendRatio;
+        est.effort.flow = est.effort.flow * ruleRatio + avg.flow * neighborBlendRatio;
+        
+        est.acoustic.hardness = est.acoustic.hardness * ruleRatio + avg.hardness * neighborBlendRatio;
+        est.acoustic.moisture = est.acoustic.moisture * ruleRatio + avg.moisture * neighborBlendRatio;
+        est.acoustic.freq_norm = est.acoustic.freq_norm * ruleRatio + avg.freq_norm * neighborBlendRatio;
+        est.acoustic.decay = est.acoustic.decay * ruleRatio + avg.decay * neighborBlendRatio;
+        
+        est.extended.reynolds_norm = est.extended.reynolds_norm * ruleRatio + avg.reynolds * neighborBlendRatio;
+        est.extended.boyle = est.extended.boyle * ruleRatio + avg.boyle * neighborBlendRatio;
+        est.extended.temp_ord = est.extended.temp_ord * ruleRatio + avg.temp * neighborBlendRatio;
+        
+        est.acoustic.freq_hz = 130.0 * Math.pow(1.5, est.acoustic.freq_norm * 0.33);
+    }
+    
+    // Round values
+    est.effort.weight = Math.round(est.effort.weight * 10) / 10;
+    est.effort.time = Math.round(est.effort.time * 10) / 10;
+    est.effort.space = Math.round(est.effort.space * 10) / 10;
+    est.effort.flow = Math.round(est.effort.flow * 10) / 10;
+    est.acoustic.hardness = Math.round(est.acoustic.hardness * 10) / 10;
+    est.acoustic.moisture = Math.round(est.acoustic.moisture * 10) / 10;
+    est.acoustic.freq_norm = Math.round(est.acoustic.freq_norm * 10) / 10;
+    est.acoustic.decay = Math.round(est.acoustic.decay * 10) / 10;
+    est.extended.reynolds_norm = Math.round(est.extended.reynolds_norm * 10) / 10;
+    est.extended.boyle = Math.round(est.extended.boyle * 10) / 10;
+    est.extended.temp_ord = Math.round(est.extended.temp_ord * 10) / 10;
+    
+    // Hex color generator from temp and moisture
+    const r = Math.min(Math.max(Math.floor((est.extended.temp_ord / 9) * 200 + (est.acoustic.hardness / 9) * 55), 0), 255);
+    const g = Math.min(Math.max(Math.floor(80 + (est.effort.flow / 9) * 80 - (est.extended.temp_ord / 9) * 50), 0), 255);
+    const b = Math.min(Math.max(Math.floor(255 - (est.extended.temp_ord / 9) * 150 + (est.acoustic.moisture / 9) * 50), 0), 255);
+    
+    const componentToHex = (c) => {
+        const hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    };
+    est.extended.color_hex = "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    
+    est.rationale = `未開拓の言葉「${query}」を音象徴特徴およびコーパスの近傍語（${neighbors.map(n => n.item.word).join(', ')}）から推定した物理モデリング。`;
+    est.ipa_clean = query;
+    est.word = query;
+    
+    return est;
+}
+
 // Populate datalist and bind UI events
 function initUI() {
     const list = document.getElementById('onomato-list');
@@ -640,7 +893,9 @@ function initUI() {
         if (found) {
             selectWord(found);
         } else {
-            alert(`"${query}" は辞書に見つかりませんでした。別の言葉をお試しください。`);
+            // Predict parameters dynamically for unregistered words
+            const estimated = estimateWordParameters(query);
+            selectWord(estimated);
         }
     };
 
