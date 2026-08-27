@@ -478,22 +478,30 @@
             </div>
         </div>
 
-        <!-- Right Viewport: Seismograph Canvas -->
-        <div class="seismograph-container">
-            <canvas id="seismograph-canvas"></canvas>
+        <!-- Right Viewport: 3D Mesh + Seismograph Canvas -->
+        <div class="seismograph-container" style="display: flex; flex-direction: column;">
+            <!-- Top Viewport: 3D 4-Node Inter-Particle Elastic Mesh -->
+            <div style="height: 220px; position: relative; background: #0b0c10; border-bottom: 1px solid var(--panel-border);">
+                <canvas id="mesh3d-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+            </div>
 
-            <!-- Bottom Floating Control Bar -->
-            <div class="seismo-footer">
-                <button id="btn-play-pause" class="btn btn-secondary">PAUSE</button>
-                <select id="select-theme" class="style-select">
-                    <option value="dark">Dark Sci-Fi</option>
-                    <option value="paper">Analog Paper (白記録紙)</option>
-                </select>
-                <select id="select-window" class="style-select">
-                    <option value="4">表示: 4秒</option>
-                    <option value="8" selected>表示: 8秒</option>
-                    <option value="15">表示: 15秒</option>
-                </select>
+            <!-- Bottom Viewport: Multi-Channel Seismograph Chart -->
+            <div style="flex: 1; position: relative;">
+                <canvas id="seismograph-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+
+                <!-- Bottom Floating Control Bar -->
+                <div class="seismo-footer">
+                    <button id="btn-play-pause" class="btn btn-secondary">PAUSE</button>
+                    <select id="select-theme" class="style-select">
+                        <option value="dark">Dark Sci-Fi</option>
+                        <option value="paper">Analog Paper (白記録紙)</option>
+                    </select>
+                    <select id="select-window" class="style-select">
+                        <option value="4">表示: 4秒</option>
+                        <option value="8" selected>表示: 8秒</option>
+                        <option value="15">表示: 15秒</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -515,6 +523,7 @@
     <script src="js/OnomaPetSynth.js"></script>
     <script src="js/OnomaPetEngine.js"></script>
     <script src="js/SeismographRenderer.js"></script>
+    <script src="js/NodeMesh3DRenderer.js"></script>
     <script src="js/TenVariationsGallery.js"></script>
     <script src="app.js"></script>
 </body>

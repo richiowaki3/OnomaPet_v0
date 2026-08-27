@@ -2,13 +2,14 @@
 
 let engine;
 let seismograph;
+let mesh3d;
 let gallery;
 let lastTimestamp = 0;
 
 function initApp() {
     console.log("[App] Initializing OnomaPet Seismograph Visualizer...");
 
-    // 1. Initialize Engine, Seismograph, and 10-Variation Gallery
+    // 1. Initialize Engine, Seismograph, 3D Mesh, and 10-Variation Gallery
     const dictData = typeof ONOMA_DICT !== 'undefined' ? ONOMA_DICT : [];
     engine = new OnomaPetEngine({
         dictionaryData: dictData,
@@ -22,6 +23,7 @@ function initApp() {
         windowSeconds: 8.0
     });
 
+    mesh3d = new NodeMesh3DRenderer('mesh3d-canvas');
     gallery = new TenVariationsGallery('ten-variations-grid');
 
     // 2. Setup UI Elements
@@ -263,6 +265,10 @@ function renderLoop(timestamp) {
 
         if (seismograph) {
             seismograph.render(buffer, currentTime, activeWord);
+        }
+
+        if (mesh3d) {
+            mesh3d.render(engine.physics, activeWord);
         }
 
         if (gallery) {
