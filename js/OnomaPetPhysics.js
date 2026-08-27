@@ -307,41 +307,63 @@ class OnomaPetPhysics {
                     }
                 }
 
-                // Top-Down Geometric Morphing (Square -> Diamond -> Rectangle -> Parallelogram)
+                // --- CH-1 Insect Wing Kinematic Flight Engine (昆虫飛翔・羽運動 CH-1 モデル) ---
                 const spaceRatio = sp / 9.0;
+                const forceAmp = (8.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
+                const driveY = driveEnvelope * forceAmp * 0.4;
+
                 const diamondK = (hd / 9.0) * 0.42 * Math.sin(this.animationTime * 3.0);
                 const rectK = (nodeMora.isLong ? 0.38 : 0.18) * Math.sin(this.animationTime * 2.0);
                 const shearK = (1.0 - spaceRatio) * 0.35 * Math.cos(this.animationTime * 2.5);
 
                 let targetX = base.x * (1.0 + diamondK);
                 let targetZ = base.z * (1.0 - diamondK);
-
-                // Rectangle Elastic Stretch
                 targetX *= (1.0 + rectK);
                 targetZ *= (1.0 - rectK);
-
-                // Parallelogram Shear Twist
                 targetX += targetZ * shearK;
 
-                // Apply dynamic geometric target spring forces
-                this.forces[i].x += (targetX - pos.x) * 2.2;
-                this.forces[i].z += (targetZ - pos.z) * 2.2;
+                // Insect 3D Trajectory Modes
+                const wordText = (this.activeWord && this.activeWord.word) ? this.activeWord.word : '';
+                const isButterfly = /[ふわひらゆらさらフワヒラユラサラー]/.test(wordText) || (t_att < 5 && hd < 5);
+                const isBee = /[ぶんころがたぽろブンコロガタポロ]/.test(wordText) || (rg >= 6 && hd >= 6);
+                
+                let flightX = 0, flightY = 0, flightZ = 0;
+                let wingFlap = 0;
+                let flightMode = 'BUTTERFLY';
 
-                // CH-4 Kinematics: Weight sag & Space Orbit
-                const forceAmp = (8.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
+                if (isButterfly) {
+                    flightMode = 'BUTTERFLY';
+                    flightX = Math.sin(this.animationTime * 1.2) * 2.2 * this.spatialScale;
+                    flightY = Math.sin(this.animationTime * 2.4) * 1.3 * this.amplitudeScale;
+                    flightZ = Math.cos(this.animationTime * 1.2) * 2.2 * this.spatialScale;
+                    wingFlap = Math.sin(this.animationTime * 4.5) * 0.8;
+                } else if (isBee) {
+                    flightMode = 'BEE';
+                    flightX = Math.cos(this.animationTime * 3.5) * 1.5 * this.spatialScale;
+                    flightY = Math.sin(this.animationTime * 7.0) * 0.8 * this.amplitudeScale;
+                    flightZ = Math.sin(this.animationTime * 3.5) * 1.5 * this.spatialScale;
+                    wingFlap = Math.sin(this.animationTime * 18.0) * 0.5;
+                } else {
+                    flightMode = 'FLY';
+                    const stepT = Math.floor(this.animationTime * 3.2);
+                    flightX = Math.sin(stepT * 1.7) * 1.8 * this.spatialScale;
+                    flightY = Math.cos(stepT * 2.3) * 1.1 * this.amplitudeScale;
+                    flightZ = Math.sin(stepT * 3.1) * 1.8 * this.spatialScale;
+                    wingFlap = (Math.random() - 0.5) * 0.9;
+                }
 
-                const driveY = driveEnvelope * forceAmp * 0.5;
-                const orbitRadius = (1.0 - spaceRatio) * 1.5;
-                const rotAngle = (this.animationTime / this.phraseDuration) * Math.PI * 2 + (i / this.nodeCount) * Math.PI * 2;
+                this.activeFlightMode = flightMode;
 
-                const driveX = Math.cos(rotAngle) * forceAmp * orbitRadius * 0.4;
-                const driveZ = Math.sin(rotAngle) * forceAmp * orbitRadius * 0.4;
+                // Apply Wing Flapping Offset to Left Wing (N0,N3) vs Right Wing (N1,N2)
+                const isLeftWing = (i === 0 || i === 3);
+                const wingY = isLeftWing ? wingFlap * 1.2 : -wingFlap * 1.2;
 
-                this.forces[i].x += driveX;
-                this.forces[i].y += driveY;
-                this.forces[i].z += driveZ;
+                // Apply 3D Center Flight Trajectory + Geometric Target Springs
+                this.forces[i].x += (flightX + targetX - pos.x) * 2.5;
+                this.forces[i].y += (flightY + wingY + driveY - pos.y) * 2.5;
+                this.forces[i].z += (flightZ + targetZ - pos.z) * 2.5;
 
-                if (i === 0) primaryDrivingY = driveY;
+                if (i === 0) primaryDrivingY = driveY + flightY;
 
                 // Plosive burst
                 if (isPlosive && moraProgress < 0.15 && !nodeMora.isPause) {

@@ -215,10 +215,27 @@ class NodeMesh3DRenderer {
         // 6. Draw Top-Down Geometric Radar Overlay in Top-Right Corner
         this.drawTopDownRadar(width, height, positions, activeWord);
 
+        // Render Active Insect Flight Mode Badge (CH-1)
+        const flightMode = physicsEngine.activeFlightMode || 'BUTTERFLY';
+        let modeText = '🦋 蝶フライト (Slow 8-Figure Orbit)';
+        let modeCol = '#4ade80';
+
+        if (flightMode === 'BEE') {
+            modeText = '🐝 蜂ホバリング (High-Freq Hovering)';
+            modeCol = '#fb923c';
+        } else if (flightMode === 'FLY') {
+            modeText = '🪰 ハエジッター (Erratic Jump Flight)';
+            modeCol = '#f43f5e';
+        }
+
+        this.ctx.font = '700 10px monospace';
+        this.ctx.fillStyle = modeCol;
+        this.ctx.fillText(`CH-1 飛翔モード: ${modeText}`, 12, 34);
+
         // Header Title
         this.ctx.font = '600 11px "Outfit", sans-serif';
         this.ctx.fillStyle = '#a5b4fc';
-        this.ctx.fillText('4-NODE 3D MORPHING GEOMETRY (正方形 ▫ ↔ ダイヤモンド ◊ ↔ 長方形 ▭ ↔ 平行四辺形 ▱)', 12, 18);
+        this.ctx.fillText('4-NODE 3D INSECT WING FLIGHT (CH-1 昆虫飛翔・羽運動モデル)', 12, 18);
     }
 
     drawGroundPlane(cx, cy) {
