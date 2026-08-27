@@ -279,49 +279,17 @@ class OnomaPetPhysics {
                     if (i === 0) primaryTurbulence = turbY;
                 }
 
-                // 3. Time (x2) & CH-2 Driving Force in Opposing Phase (N0,N2: +Y UP vs N1,N3: -Y DOWN)
-                const phaseSign = (i === 0 || i === 2) ? 1.0 : -1.0;
-                const phaseDelay = (i / this.nodeCount) * Math.PI * 2 * (1.0 - hd / 9.0);
-                const nodeRelTime = ((this.animationTime - phaseDelay * 0.05) % this.phraseDuration + this.phraseDuration) % this.phraseDuration;
-                
-                let nodeMora = currentMora;
-                for (let m = 0; m < this.moraSequence.length; m++) {
-                    if (nodeRelTime >= this.moraSequence[m].startTime && nodeRelTime < this.moraSequence[m].endTime) {
-                        nodeMora = this.moraSequence[m];
-                        break;
-                    }
-                }
-
-                const moraProgress = (nodeRelTime - nodeMora.startTime) / (nodeMora.duration || 0.2);
-                const timeRatio = t_att / 9.0;
-                let driveEnvelope = 0;
-
-                if (!nodeMora.isPause) {
-                    if (timeRatio > 0.35) {
-                        const kickPower = Math.pow(Math.sin(moraProgress * Math.PI), 1.0 + (9 - t_att) * 0.3);
-                        const suddenEnv = kickPower * Math.exp(-dc * 0.25 * moraProgress);
-                        driveEnvelope += timeRatio * suddenEnv * 2.2;
-                    }
-                    if (timeRatio < 0.75) {
-                        const waveEnv = Math.sin(moraProgress * Math.PI * 2);
-                        driveEnvelope += (1.0 - timeRatio) * waveEnv * 1.2;
-                    }
-                }
-
-                // 4. Space (x3): Direct (straight line) vs Indirect (orbital swirl)
+                // Pure CH-4 Laban Effort Kinematics (CH-2 Motor Drive Removed for Natural Motion)
                 const spaceRatio = sp / 9.0;
-                const forceAmp = (12.0 + w * 28.0) * nodeMora.accentFactor * this.amplitudeScale;
+                const forceAmp = (8.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
 
-                // Opposing Phase CH-2 Driving Vector (N0, N2 -> +Y UP, N1, N3 -> -Y DOWN)
-                const driveY = phaseSign * driveEnvelope * forceAmp;
-                const orbitRadius = (1.0 - spaceRatio) * 1.8;
+                const orbitRadius = (1.0 - spaceRatio) * 1.5;
                 const rotAngle = (this.animationTime / this.phraseDuration) * Math.PI * 2 + (i / this.nodeCount) * Math.PI * 2;
 
-                const driveX = Math.cos(rotAngle) * driveEnvelope * forceAmp * orbitRadius;
-                const driveZ = Math.sin(rotAngle) * driveEnvelope * forceAmp * orbitRadius;
+                const driveX = Math.cos(rotAngle) * forceAmp * orbitRadius * 0.4;
+                const driveZ = Math.sin(rotAngle) * forceAmp * orbitRadius * 0.4;
 
                 this.forces[i].x += driveX;
-                this.forces[i].y += driveY;
                 this.forces[i].z += driveZ;
 
                 if (i === 0) primaryDrivingY = driveY;

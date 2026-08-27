@@ -211,17 +211,16 @@ class NodeMesh3DRenderer {
 
             this.ctx.shadowBlur = 0;
 
-            // Phase Tag (+Y UP vs -Y DOWN)
-            const phaseTag = node.isUpPhase ? 'N' + node.id + ' (+Y)' : 'N' + node.id + ' (-Y)';
+            // Node ID Tag
             this.ctx.font = '700 10px monospace';
             this.ctx.fillStyle = col;
-            this.ctx.fillText(phaseTag, node.sx + radius + 4, node.sy + 3);
+            this.ctx.fillText(`N${node.id}`, node.sx + radius + 4, node.sy + 3);
         });
 
         // Title Header
         this.ctx.font = '600 11px "Outfit", sans-serif';
         this.ctx.fillStyle = '#a5b4fc';
-        this.ctx.fillText('4-NODE 3D CH-2 OPPOSING SEESAW MESH (N0,N2:+Y / N1,N3:-Y)', 12, 18);
+        this.ctx.fillText('4-NODE 3D CH-4 LABAN ELASTIC MESH (CH-2除去・自然なエフォート運動)', 12, 18);
     }
 
     drawGroundPlane(cx, cy) {
