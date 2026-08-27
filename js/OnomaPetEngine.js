@@ -8,7 +8,7 @@ class OnomaPetEngine {
 
         this.dictionary = new DictClass(options.dictionaryData || []);
         this.physics = new PhysClass({
-            nodeCount: options.nodeCount || 4,
+            nodeCount: options.nodeCount || 1,
             spatialScale: options.spatialScale || 1.0,
             amplitudeScale: options.amplitudeScale || 1.0
         });
