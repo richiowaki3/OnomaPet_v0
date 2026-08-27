@@ -1,11 +1,9 @@
 /**
- * NodeMesh3DRenderer.js - 4-Node Opposing-Phase 3D Elastic Seesaw Visualizer
+ * NodeMesh3DRenderer.js - 4-Node 3D Elastic Mesh & Top-Down Morphing Geometry Radar
  *
- * Renders 4 dynamic 3D nodes with CH-2 Opposing Phase Seesaw Dynamics:
- * - Node 0 & Node 2: Pushed +Y UP (Positive Phase)
- * - Node 1 & Node 3: Pushed -Y DOWN (Negative Phase)
- *
- * 6 Pairwise Spring Coupling Edges dynamically flex, stretch (red), and compress (purple).
+ * Renders 4 dynamic 3D nodes with Top-Down Morphing Geometry:
+ * - Square Base ▫ -> Diamond ◊ -> Rectangle ▭ -> Parallelogram ▱
+ * Includes a dedicated 2D Top-Down Geometric Radar Overlay in the top-right corner.
  */
 
 class NodeMesh3DRenderer {
@@ -94,13 +92,12 @@ class NodeMesh3DRenderer {
 
         this.ctx.clearRect(0, 0, width, height);
 
-        // 1. Dark Sci-Fi Background
+        // 1. Dark Background
         this.ctx.fillStyle = '#0b0c10';
         this.ctx.fillRect(0, 0, width, height);
 
         if (!physicsEngine) return;
 
-        // Get 4 3D Node positions
         const positions = physicsEngine.getNodePositions();
         if (!positions || positions.length < 4) return;
 
@@ -109,7 +106,7 @@ class NodeMesh3DRenderer {
             ? OnomaPetKinematics.calculateVolumeMatrix(activeWord)
             : new Array(10).fill(128);
 
-        const expandGain = vols[1] / 255.0; // F2 Swirl / Expansion
+        const expandGain = vols[1] / 255.0; // F2 Swirl
         const pulseGain = vols[4] / 255.0;  // F5 Pulsation
 
         // Project all 4 nodes to 2D Screen Coordinates
@@ -119,12 +116,11 @@ class NodeMesh3DRenderer {
                 id: idx,
                 x: p.x, y: p.y, z: p.z,
                 sx: proj.sx, sy: proj.sy,
-                scale: proj.scale, depth: proj.depth,
-                isUpPhase: (idx === 0 || idx === 2) // N0, N2: +Y UP vs N1, N3: -Y DOWN
+                scale: proj.scale, depth: proj.depth
             };
         });
 
-        // 2. Render Ground Reference Plane Line
+        // 2. Render Ground Reference Grid
         this.drawGroundPlane(cx, cy);
 
         // 3. Draw 6 Pairwise Coupling Spring Edges between the 4 nodes
@@ -133,7 +129,6 @@ class NodeMesh3DRenderer {
             [0, 2], [1, 3]                  // 2 Diagonal cross edges
         ];
 
-        // Rest distance baseline
         const restDist = 3.2 * (1.0 + expandGain * 0.5 - pulseGain * 0.35);
 
         edges.forEach(([i, j]) => {
@@ -183,7 +178,7 @@ class NodeMesh3DRenderer {
             const radius = Math.max(12 * (node.scale * 0.011), 6);
             const col = nodeCols[node.id % 4];
 
-            // Ground Drop Line for each node
+            // Ground Drop Line
             const groundProj = this.project(node.x, -2.5, node.z, cx, cy);
             this.ctx.strokeStyle = `${col}44`;
             this.ctx.lineWidth = 1;
@@ -217,10 +212,13 @@ class NodeMesh3DRenderer {
             this.ctx.fillText(`N${node.id}`, node.sx + radius + 4, node.sy + 3);
         });
 
-        // Title Header
+        // 6. Draw Top-Down Geometric Radar Overlay in Top-Right Corner
+        this.drawTopDownRadar(width, height, positions, activeWord);
+
+        // Header Title
         this.ctx.font = '600 11px "Outfit", sans-serif';
         this.ctx.fillStyle = '#a5b4fc';
-        this.ctx.fillText('4-NODE 3D CH-4 LABAN ELASTIC MESH (CH-2除去・自然なエフォート運動)', 12, 18);
+        this.ctx.fillText('4-NODE 3D MORPHING GEOMETRY (正方形 ▫ ↔ ダイヤモンド ◊ ↔ 長方形 ▭ ↔ 平行四辺形 ▱)', 12, 18);
     }
 
     drawGroundPlane(cx, cy) {
@@ -237,6 +235,59 @@ class NodeMesh3DRenderer {
             const p4 = this.project(gridR, -2.5, i * 0.8, cx, cy);
             this.ctx.beginPath(); this.ctx.moveTo(p3.sx, p3.sy); this.ctx.lineTo(p4.sx, p4.sy); this.ctx.stroke();
         }
+    }
+
+    drawTopDownRadar(width, height, positions, activeWord) {
+        const radarCenterX = width - 65;
+        const radarCenterY = 52;
+        const radarRadius = 32;
+
+        // Background Radar Box
+        this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.rect(radarCenterX - radarRadius - 8, radarCenterY - radarRadius - 16, radarRadius * 2 + 16, radarRadius * 2 + 28);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Label
+        this.ctx.font = '700 9px monospace';
+        this.ctx.fillStyle = '#38bdf8';
+        this.ctx.fillText('俯瞰 TOP-DOWN', radarCenterX - 30, radarCenterY - radarRadius - 5);
+
+        // Radar Axis
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(radarCenterX - radarRadius, radarCenterY); this.ctx.lineTo(radarCenterX + radarRadius, radarCenterY);
+        this.ctx.moveTo(radarCenterX, radarCenterY - radarRadius); this.ctx.lineTo(radarCenterX, radarCenterY + radarRadius);
+        this.ctx.stroke();
+
+        // Map 4 Node (x, z) Top-Down coordinates to Radar Box
+        const radarNodes = positions.map((p) => ({
+            rx: radarCenterX + p.x * 7.5,
+            ry: radarCenterY + p.z * 7.5
+        }));
+
+        // Draw Polygon Connecting 4 Nodes
+        this.ctx.strokeStyle = '#a855f7';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(radarNodes[0].rx, radarNodes[0].ry);
+        this.ctx.lineTo(radarNodes[1].rx, radarNodes[1].ry);
+        this.ctx.lineTo(radarNodes[2].rx, radarNodes[2].ry);
+        this.ctx.lineTo(radarNodes[3].rx, radarNodes[3].ry);
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Draw 4 Top-Down Node Dots
+        const nodeCols = ['#38bdf8', '#fb923c', '#4ade80', '#f43f5e'];
+        radarNodes.forEach((rn, i) => {
+            this.ctx.fillStyle = nodeCols[i];
+            this.ctx.beginPath();
+            this.ctx.arc(rn.rx, rn.ry, 3, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
     }
 }
 

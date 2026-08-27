@@ -307,8 +307,27 @@ class OnomaPetPhysics {
                     }
                 }
 
-                // CH-4 Kinematics: Weight sag & Space Orbit
+                // Top-Down Geometric Morphing (Square -> Diamond -> Rectangle -> Parallelogram)
                 const spaceRatio = sp / 9.0;
+                const diamondK = (hd / 9.0) * 0.42 * Math.sin(this.animationTime * 3.0);
+                const rectK = (nodeMora.isLong ? 0.38 : 0.18) * Math.sin(this.animationTime * 2.0);
+                const shearK = (1.0 - spaceRatio) * 0.35 * Math.cos(this.animationTime * 2.5);
+
+                let targetX = base.x * (1.0 + diamondK);
+                let targetZ = base.z * (1.0 - diamondK);
+
+                // Rectangle Elastic Stretch
+                targetX *= (1.0 + rectK);
+                targetZ *= (1.0 - rectK);
+
+                // Parallelogram Shear Twist
+                targetX += targetZ * shearK;
+
+                // Apply dynamic geometric target spring forces
+                this.forces[i].x += (targetX - pos.x) * 2.2;
+                this.forces[i].z += (targetZ - pos.z) * 2.2;
+
+                // CH-4 Kinematics: Weight sag & Space Orbit
                 const forceAmp = (8.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
 
                 const driveY = driveEnvelope * forceAmp * 0.5;
