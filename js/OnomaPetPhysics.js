@@ -279,7 +279,8 @@ class OnomaPetPhysics {
                     if (i === 0) primaryTurbulence = turbY;
                 }
 
-                // 3. Time (x2): Sudden (kick spike) vs Sustained (smooth wave)
+                // 3. Time (x2) & CH-2 Driving Force in Opposing Phase (N0,N2: +Y UP vs N1,N3: -Y DOWN)
+                const phaseSign = (i === 0 || i === 2) ? 1.0 : -1.0;
                 const phaseDelay = (i / this.nodeCount) * Math.PI * 2 * (1.0 - hd / 9.0);
                 const nodeRelTime = ((this.animationTime - phaseDelay * 0.05) % this.phraseDuration + this.phraseDuration) % this.phraseDuration;
                 
@@ -297,13 +298,11 @@ class OnomaPetPhysics {
 
                 if (!nodeMora.isPause) {
                     if (timeRatio > 0.35) {
-                        // Sudden: Sharp kick impulse
                         const kickPower = Math.pow(Math.sin(moraProgress * Math.PI), 1.0 + (9 - t_att) * 0.3);
                         const suddenEnv = kickPower * Math.exp(-dc * 0.25 * moraProgress);
                         driveEnvelope += timeRatio * suddenEnv * 2.2;
                     }
                     if (timeRatio < 0.75) {
-                        // Sustained: Smooth continuous wave
                         const waveEnv = Math.sin(moraProgress * Math.PI * 2);
                         driveEnvelope += (1.0 - timeRatio) * waveEnv * 1.2;
                     }
@@ -313,7 +312,8 @@ class OnomaPetPhysics {
                 const spaceRatio = sp / 9.0;
                 const forceAmp = (12.0 + w * 28.0) * nodeMora.accentFactor * this.amplitudeScale;
 
-                const driveY = driveEnvelope * forceAmp;
+                // Opposing Phase CH-2 Driving Vector (N0, N2 -> +Y UP, N1, N3 -> -Y DOWN)
+                const driveY = phaseSign * driveEnvelope * forceAmp;
                 const orbitRadius = (1.0 - spaceRatio) * 1.8;
                 const rotAngle = (this.animationTime / this.phraseDuration) * Math.PI * 2 + (i / this.nodeCount) * Math.PI * 2;
 

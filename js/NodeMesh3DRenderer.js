@@ -1,12 +1,11 @@
 /**
- * NodeMesh3DRenderer.js - Single 3D Dynamic Node Visualizer for CH-4 Laban Effort
+ * NodeMesh3DRenderer.js - 4-Node Opposing-Phase 3D Elastic Seesaw Visualizer
  *
- * Renders 1 Single Dynamic Core Node in 3D perspective space.
- * CH-4 Laban Effort (Weight, Time, Space, Flow) directly shapes:
- * - 3D Spatial Orbit Trajectory (Space x3)
- * - Impulse Acceleration & Velocity (Time x2)
- * - Gravity Sag & Squish Deformation (Weight x1)
- * - Viscous Motion Trail & Damping (Flow x4)
+ * Renders 4 dynamic 3D nodes with CH-2 Opposing Phase Seesaw Dynamics:
+ * - Node 0 & Node 2: Pushed +Y UP (Positive Phase)
+ * - Node 1 & Node 3: Pushed -Y DOWN (Negative Phase)
+ *
+ * 6 Pairwise Spring Coupling Edges dynamically flex, stretch (red), and compress (purple).
  */
 
 class NodeMesh3DRenderer {
@@ -16,14 +15,10 @@ class NodeMesh3DRenderer {
         this.ctx = this.canvas.getContext('2d');
 
         // Camera Orbit Angles
-        this.rotX = 0.35;
-        this.rotY = 0.5;
-        this.distance = 6.5;
-        this.fov = 400;
-
-        // Motion Trail History for Single Node
-        this.trail = [];
-        this.maxTrailLength = 40;
+        this.rotX = 0.42;
+        this.rotY = 0.55;
+        this.distance = 6.2;
+        this.fov = 420;
 
         // Interactive Orbit Dragging
         this.isDragging = false;
@@ -59,7 +54,7 @@ class NodeMesh3DRenderer {
         window.addEventListener('mouseup', () => { this.isDragging = false; });
         this.canvas.addEventListener('wheel', (e) => {
             this.distance += e.deltaY * 0.005;
-            this.distance = Math.max(3.0, Math.min(12.0, this.distance));
+            this.distance = Math.max(3.0, Math.min(14.0, this.distance));
         });
     }
 
@@ -99,159 +94,150 @@ class NodeMesh3DRenderer {
 
         this.ctx.clearRect(0, 0, width, height);
 
-        // 1. Dark Sci-Fi Background Grid
+        // 1. Dark Sci-Fi Background
         this.ctx.fillStyle = '#0b0c10';
         this.ctx.fillRect(0, 0, width, height);
 
         if (!physicsEngine) return;
 
-        // Get 1 Single Dynamic Core Node Position
+        // Get 4 3D Node positions
         const positions = physicsEngine.getNodePositions();
-        const p = positions[0] || { x: 0, y: 0, z: 0 };
-
-        // Laban Effort Parameters from CH-4
-        const w = activeWord && activeWord.effort ? activeWord.effort.weight : 5;      // Weight (Red)
-        const t_att = activeWord && activeWord.effort ? activeWord.effort.time : 5;  // Time (Yellow)
-        const sp = activeWord && activeWord.effort ? activeWord.effort.space : 5;     // Space (Green)
-        const fl = activeWord && activeWord.effort ? activeWord.effort.flow : 5;      // Flow (Cyan)
+        if (!positions || positions.length < 4) return;
 
         // 10-Channel Volume Matrix Gain
         const vols = (typeof OnomaPetKinematics !== 'undefined' && activeWord)
             ? OnomaPetKinematics.calculateVolumeMatrix(activeWord)
             : new Array(10).fill(128);
 
-        const maxVol = Math.max(...vols);
-        const masterGain = maxVol / 255.0;
+        const expandGain = vols[1] / 255.0; // F2 Swirl / Expansion
+        const pulseGain = vols[4] / 255.0;  // F5 Pulsation
 
-        // Record Motion Trail for Single Node
-        const proj = this.project(p.x, p.y, p.z, cx, cy);
-        this.trail.push({ x: p.x, y: p.y, z: p.z, sx: proj.sx, sy: proj.sy, depth: proj.depth, scale: proj.scale });
-        if (this.trail.length > this.maxTrailLength) this.trail.shift();
+        // Project all 4 nodes to 2D Screen Coordinates
+        const projectedNodes = positions.map((p, idx) => {
+            const proj = this.project(p.x, p.y, p.z, cx, cy);
+            return {
+                id: idx,
+                x: p.x, y: p.y, z: p.z,
+                sx: proj.sx, sy: proj.sy,
+                scale: proj.scale, depth: proj.depth,
+                isUpPhase: (idx === 0 || idx === 2) // N0, N2: +Y UP vs N1, N3: -Y DOWN
+            };
+        });
 
-        // 2. Draw 3D Ground Axis Grid Line (Center Reference Plane)
-        this.drawGroundGrid(cx, cy);
+        // 2. Render Ground Reference Plane Line
+        this.drawGroundPlane(cx, cy);
 
-        // 3. Draw 3D Spatial Orbit Guide Ring (CH-4 Space x3 Visual)
-        const orbitRadius = (1.0 + (9.0 - sp) * 0.25) * masterGain * 1.5;
-        this.drawOrbitRing(cx, cy, orbitRadius, sp);
+        // 3. Draw 6 Pairwise Coupling Spring Edges between the 4 nodes
+        const edges = [
+            [0, 1], [1, 2], [2, 3], [3, 0], // Outer 4 square ring edges
+            [0, 2], [1, 3]                  // 2 Diagonal cross edges
+        ];
 
-        // 4. Render CH-4 Motion Trail Stream (Flow x4 & Time x2 Visual)
-        if (this.trail.length > 1) {
-            for (let i = 0; i < this.trail.length - 1; i++) {
-                const pt1 = this.trail[i];
-                const pt2 = this.trail[i + 1];
-                const alpha = (i / this.trail.length) * 0.7;
+        // Rest distance baseline
+        const restDist = 3.2 * (1.0 + expandGain * 0.5 - pulseGain * 0.35);
 
-                // Color gradient based on CH-4 Flow (Cyan) & Space (Green)
-                this.ctx.strokeStyle = `rgba(6, 182, 212, ${alpha})`;
-                this.ctx.lineWidth = Math.max(2 * (pt1.scale * 0.01), 0.5);
-                this.ctx.beginPath();
-                this.ctx.moveTo(pt1.sx, pt1.sy);
-                this.ctx.lineTo(pt2.sx, pt2.sy);
-                this.ctx.stroke();
+        edges.forEach(([i, j]) => {
+            const n1 = projectedNodes[i];
+            const n2 = projectedNodes[j];
+
+            const dx = n1.x - n2.x;
+            const dy = n1.y - n2.y;
+            const dz = n1.z - n2.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            const tensionRatio = dist / restDist;
+            let edgeCol = '#38bdf8'; // Cyan (Normal)
+            if (tensionRatio > 1.15) {
+                edgeCol = '#ef4444'; // Red (Stretched / Tension)
+            } else if (tensionRatio < 0.85) {
+                edgeCol = '#a855f7'; // Purple (Compressed)
             }
-        }
 
-        // 5. Render Vertical Gravity Drop Indicator Line (CH-4 Weight x1 Visual)
-        const groundProj = this.project(p.x, -2.5, p.z, cx, cy);
-        this.ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'; // Red Weight Gravity Line
-        this.ctx.lineWidth = 1.2;
-        this.ctx.setLineDash([3, 3]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(proj.sx, proj.sy);
-        this.ctx.lineTo(groundProj.sx, groundProj.sy);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
+            const alpha = Math.min(Math.max(1.2 - ((n1.depth + n2.depth) / 2) * 0.08, 0.25), 0.95);
 
-        // Ground Impact Ring
-        this.ctx.strokeStyle = '#ef4444';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.arc(groundProj.sx, groundProj.sy, 8 * (groundProj.scale * 0.01), 0, Math.PI * 2);
-        this.ctx.stroke();
+            this.ctx.strokeStyle = edgeCol;
+            this.ctx.globalAlpha = alpha;
+            this.ctx.lineWidth = Math.max(2.2 * ((n1.scale + n2.scale) / 2) * 0.009, 1.0);
+            this.ctx.beginPath();
+            this.ctx.moveTo(n1.sx, n1.sy);
+            this.ctx.lineTo(n2.sx, n2.sy);
+            this.ctx.stroke();
 
-        // 6. Render 1 Single Dynamic Core Node Body
-        const baseRadius = 14 * (proj.scale * 0.012);
-        // Squish Deformation (Weight x1 makes node squish horizontally on impact)
-        const squishX = 1.0 + (w / 9.0) * 0.35 * Math.sin(physicsEngine.animationTime * 8);
-        const squishY = 1.0 / squishX;
+            // Distance Badge Text at Center of Edge
+            const midSx = (n1.sx + n2.sx) / 2;
+            const midSy = (n1.sy + n2.sy) / 2;
+            this.ctx.font = '600 9px monospace';
+            this.ctx.fillStyle = edgeCol;
+            this.ctx.fillText(`d:${dist.toFixed(1)}`, midSx + 4, midSy - 4);
+        });
 
-        this.ctx.save();
-        this.ctx.translate(proj.sx, proj.sy);
-        this.ctx.scale(squishX, squishY);
+        this.ctx.globalAlpha = 1.0;
 
-        // Multi-Layer Glow Aura
-        const nodeColor = '#a855f7'; // Purple CH-4 Effort Base Color
-        this.ctx.fillStyle = nodeColor;
-        this.ctx.shadowColor = '#38bdf8';
-        this.ctx.shadowBlur = 18;
+        // 4. Sort Nodes by Depth (Painter's Algorithm)
+        projectedNodes.sort((a, b) => b.depth - a.depth);
 
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, baseRadius, 0, Math.PI * 2);
-        this.ctx.fill();
+        // 5. Render 4 Prominent Glowing 3D Spheres
+        const nodeCols = ['#38bdf8', '#fb923c', '#4ade80', '#f43f5e'];
 
-        // Inner Bright Core
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, baseRadius * 0.4, 0, Math.PI * 2);
-        this.ctx.fill();
+        projectedNodes.forEach((node) => {
+            const radius = Math.max(12 * (node.scale * 0.011), 6);
+            const col = nodeCols[node.id % 4];
 
-        this.ctx.restore();
+            // Ground Drop Line for each node
+            const groundProj = this.project(node.x, -2.5, node.z, cx, cy);
+            this.ctx.strokeStyle = `${col}44`;
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([2, 2]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(node.sx, node.sy);
+            this.ctx.lineTo(groundProj.sx, groundProj.sy);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
 
-        // 7. Overlay CH-4 Effort Force Vectors HUD
-        this.renderEffortHud(proj.sx, proj.sy, w, t_att, sp, fl);
+            // Node Outer Glow Aura
+            this.ctx.fillStyle = col;
+            this.ctx.shadowColor = col;
+            this.ctx.shadowBlur = 14;
 
-        // Header Title
+            this.ctx.beginPath();
+            this.ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Inner Bright Core
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.beginPath();
+            this.ctx.arc(node.sx, node.sy, radius * 0.45, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            this.ctx.shadowBlur = 0;
+
+            // Phase Tag (+Y UP vs -Y DOWN)
+            const phaseTag = node.isUpPhase ? 'N' + node.id + ' (+Y)' : 'N' + node.id + ' (-Y)';
+            this.ctx.font = '700 10px monospace';
+            this.ctx.fillStyle = col;
+            this.ctx.fillText(phaseTag, node.sx + radius + 4, node.sy + 3);
+        });
+
+        // Title Header
         this.ctx.font = '600 11px "Outfit", sans-serif';
         this.ctx.fillStyle = '#a5b4fc';
-        this.ctx.fillText('1-NODE 3D CH-4 DYNAMIC EFFORT MODEL (ドラッグで3D視点回転)', 12, 18);
+        this.ctx.fillText('4-NODE 3D CH-2 OPPOSING SEESAW MESH (N0,N2:+Y / N1,N3:-Y)', 12, 18);
     }
 
-    drawGroundGrid(cx, cy) {
+    drawGroundPlane(cx, cy) {
         const gridR = 3.0;
-        const div = 6;
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         this.ctx.lineWidth = 1;
 
-        for (let i = -div; i <= div; i += 2) {
-            const p1 = this.project(i * 0.5, -2.5, -gridR, cx, cy);
-            const p2 = this.project(i * 0.5, -2.5, gridR, cx, cy);
+        for (let i = -3; i <= 3; i += 2) {
+            const p1 = this.project(i * 0.8, -2.5, -gridR, cx, cy);
+            const p2 = this.project(i * 0.8, -2.5, gridR, cx, cy);
             this.ctx.beginPath(); this.ctx.moveTo(p1.sx, p1.sy); this.ctx.lineTo(p2.sx, p2.sy); this.ctx.stroke();
 
-            const p3 = this.project(-gridR, -2.5, i * 0.5, cx, cy);
-            const p4 = this.project(gridR, -2.5, i * 0.5, cx, cy);
+            const p3 = this.project(-gridR, -2.5, i * 0.8, cx, cy);
+            const p4 = this.project(gridR, -2.5, i * 0.8, cx, cy);
             this.ctx.beginPath(); this.ctx.moveTo(p3.sx, p3.sy); this.ctx.lineTo(p4.sx, p4.sy); this.ctx.stroke();
         }
-    }
-
-    drawOrbitRing(cx, cy, radius, sp) {
-        const segs = 32;
-        this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)'; // Green Space Line
-        this.ctx.lineWidth = 1.2;
-        this.ctx.beginPath();
-
-        for (let i = 0; i <= segs; i++) {
-            const ang = (i / segs) * Math.PI * 2;
-            const ox = Math.cos(ang) * radius;
-            const oz = Math.sin(ang) * radius;
-            const p = this.project(ox, 0, oz, cx, cy);
-
-            if (i === 0) this.ctx.moveTo(p.sx, p.sy);
-            else this.ctx.lineTo(p.sx, p.sy);
-        }
-        this.ctx.stroke();
-    }
-
-    renderEffortHud(sx, sy, w, t_att, sp, fl) {
-        // Draw 4 Vector Arrows from the Single Node for CH-4 Efforts
-        const hudX = sx + 25;
-        const hudY = sy - 20;
-
-        this.ctx.font = '600 10px monospace';
-        this.ctx.fillStyle = '#ef4444'; this.ctx.fillText(`W:${w.toFixed(1)}`, hudX, hudY);        // Red Weight
-        this.ctx.fillStyle = '#f59e0b'; this.ctx.fillText(`T:${t_att.toFixed(1)}`, hudX, hudY + 12); // Yellow Time
-        this.ctx.fillStyle = '#10b981'; this.ctx.fillText(`S:${sp.toFixed(1)}`, hudX, hudY + 24);    // Green Space
-        this.ctx.fillStyle = '#06b6d4'; this.ctx.fillText(`F:${fl.toFixed(1)}`, hudX, hudY + 36);    // Cyan Flow
     }
 }
 
