@@ -1,89 +1,25 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <script>
-        (function() {
-            // Create debugging log container
-            const logBox = document.createElement('div');
-            logBox.id = 'debug-log-box';
-            logBox.style.position = 'fixed';
-            logBox.style.bottom = '20px';
-            logBox.style.right = '20px';
-            logBox.style.width = '420px';
-            logBox.style.maxHeight = '350px';
-            logBox.style.overflowY = 'auto';
-            logBox.style.background = 'rgba(239, 68, 68, 0.95)';
-            logBox.style.color = '#fff';
-            logBox.style.fontFamily = 'monospace';
-            logBox.style.fontSize = '12px';
-            logBox.style.padding = '20px';
-            logBox.style.borderRadius = '0';
-            logBox.style.zIndex = '9999999';
-            logBox.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
-            logBox.style.pointerEvents = 'auto';
-            logBox.style.display = 'none';
-            logBox.style.border = '1px solid rgba(255,255,255,0.2)';
-            
-            function logToScreen(msg, type = 'error') {
-                logBox.style.display = 'block';
-                const item = document.createElement('div');
-                item.style.marginBottom = '10px';
-                item.style.borderBottom = '1px solid rgba(255,255,255,0.15)';
-                item.style.paddingBottom = '6px';
-                item.textContent = `[${type.toUpperCase()}] ${msg}`;
-                logBox.appendChild(item);
-                logBox.scrollTop = logBox.scrollHeight;
-            }
-
-            const oldConsoleError = console.error;
-            console.error = function() {
-                const args = Array.from(arguments);
-                logToScreen(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '), 'console');
-                oldConsoleError.apply(console, arguments);
-            };
-
-            window.addEventListener('error', function(e) {
-                let msg = '';
-                if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
-                    const src = e.target.src || e.target.href || '';
-                    msg = `Failed to load resource: ${src.split('/').pop() || src} (Network Error / CORS Block)`;
-                } else {
-                    const filename = e.filename ? e.filename.split('/').pop() : 'unknown';
-                    const lineno = e.lineno || '0';
-                    msg = `${e.message} at ${filename}:${lineno}`;
-                }
-                logToScreen(msg, 'runtime');
-                alert("🚨 OnomaPet Debug Alert:\n\n" + msg);
-            }, true);
-
-            window.addEventListener('unhandledrejection', function(e) {
-                const msg = `Promise rejected: ${e.reason}`;
-                logToScreen(msg, 'promise');
-                alert("🚨 OnomaPet Debug Alert:\n\n" + msg);
-            });
-
-            window.addEventListener('DOMContentLoaded', () => {
-                document.body.appendChild(logBox);
-            });
-        })();
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OnomaPet v.0</title>
+    <title>OnomaPet - 地震計風タイムライン波形アナライザー</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
-            --bg-color: #0b0c10;
-            --panel-bg: rgba(15, 23, 42, 0.7);
-            --panel-border: rgba(255, 255, 255, 0.08);
+            --bg-color: #090a0f;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.1);
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --accent-color: #6366f1;
             --accent-hover: #4f46e5;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
         }
 
         * {
@@ -98,294 +34,488 @@
             color: var(--text-primary);
             overflow: hidden;
             height: 100vh;
-            width: 100vw;
-        }
-
-        #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        .ui-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            justify-content: center;
-            padding: 12px;
-        }
-
-        .control-panel {
-            width: 100%;
-            max-width: 360px;
-            height: fit-content;
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border);
-            border-radius: 0; /* Square corners */
-            padding: 14px;
             display: flex;
             flex-direction: column;
+        }
+
+        /* Top Header Control Bar */
+        header {
+            height: 64px;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
             gap: 12px;
-            pointer-events: auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        @media (min-width: 600px) {
-            .ui-overlay {
-                justify-content: flex-start;
-                padding: 20px;
-            }
-        }
-
-        .header h1 {
-            font-size: 20px;
+        .header-title h1 {
+            font-size: 1.15rem;
             font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #a5b4fc, #6366f1);
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #a5b4fc, #38bdf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: baseline;
         }
 
-        .header .author-name {
-            font-size: 10px;
-            color: var(--text-secondary);
-            font-weight: 400;
-            margin-left: 8px;
-            letter-spacing: 0px;
-            -webkit-text-fill-color: var(--text-secondary);
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 6px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--panel-border);
-            border-radius: 0; /* Square corners */
-            padding: 8px 10px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 14px;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        input[type="text"]:focus {
-            border-color: var(--accent-color);
-        }
-
-        button {
-            cursor: pointer;
-            border: none;
-            border-radius: 0; /* Square corners */
-            font-family: inherit;
+        .badge-tag {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(99, 102, 241, 0.4);
             font-weight: 600;
-            transition: all 0.2s ease-in-out;
+            letter-spacing: 0.05em;
+        }
+
+        /* Search & Input Container */
+        .controls-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 260px;
+            padding: 8px 14px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: inherit;
             outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Scrollable Word Select Dropdown */
+        .scroll-select {
+            width: 180px;
+            padding: 8px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            max-height: 120px;
+        }
+
+        .scroll-select option {
+            background: #1e293b;
+            color: #fff;
+            padding: 4px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
         }
 
-        .btn-clear {
-            background: transparent;
-            border: 1px solid var(--panel-border);
-            color: var(--text-secondary);
-            width: 34px;
-            height: 34px;
-            font-size: 13px;
-        }
-
-        .btn-clear:hover {
-            color: var(--text-primary);
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .btn-primary {
-            background: var(--accent-color);
-            color: white;
-            padding: 8px 16px;
-            font-size: 13px;
-        }
-
-        .btn-primary:hover {
+        .btn:hover {
             background: var(--accent-hover);
+            transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background: transparent;
+            background: rgba(51, 65, 85, 0.8);
+            color: var(--text-primary);
             border: 1px solid var(--panel-border);
-            color: var(--text-secondary);
-            padding: 8px 12px;
-            font-size: 12px;
         }
 
         .btn-secondary:hover {
-            color: var(--text-primary);
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(71, 85, 105, 0.9);
         }
 
-        /* Minimized Single-Container Parameters display */
-        .info-section {
-            border-top: 1px solid var(--panel-border);
-            padding-top: 10px;
+        .btn-toggle {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
-        .param-container {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 8px 10px;
+        .btn-toggle.active {
+            background: #10b981;
+            color: #fff;
+        }
+
+        /* Main Workspace Area */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Left Side Panel: Parameter Readouts */
+        .sidebar {
+            width: 320px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            padding: 16px;
+            gap: 16px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
         }
 
-        .param-cat {
-            font-size: 10px;
-            line-height: 1.2;
-        }
-
-        .cat-header {
-            color: #818cf8;
-            font-weight: 700;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            font-size: 9px;
-            letter-spacing: 0.5px;
-        }
-
-        .cat-body {
-            color: var(--text-secondary);
-            font-family: monospace;
-        }
-
-        .cat-body span {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        .instructions {
-            position: absolute;
-            bottom: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        .panel-card {
+            background: rgba(30, 41, 59, 0.5);
             border: 1px solid var(--panel-border);
-            border-radius: 0; /* Square corners */
-            padding: 4px 10px;
-            pointer-events: auto;
-            font-size: 10px;
-            color: var(--text-secondary);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            white-space: nowrap;
-            z-index: 10;
+            border-radius: 8px;
+            padding: 14px;
         }
 
-        .instructions span {
-            color: var(--text-primary);
-            font-weight: 600;
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .word-display {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .ipa-display {
+            font-family: monospace;
+            font-size: 0.88rem;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        .rationale-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .metric-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.82rem;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            font-weight: 700;
+            font-family: monospace;
+            color: #fff;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 2px;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #38bdf8);
+            width: 50%;
+            transition: width 0.3s ease;
+        }
+
+        /* Seismograph Canvas Area */
+        .seismograph-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        canvas#seismograph-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Bottom Floating Bar */
+        .seismo-footer {
+            position: absolute;
+            bottom: 16px;
+            right: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(8px);
+        }
+
+        /* 10 Variations Gallery Section */
+        .ten-variations-section {
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid var(--panel-border);
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 90;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .gallery-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #a5b4fc;
+        }
+
+        .gallery-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .ten-grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .color-preview-badge {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: inline-block;
+        }
+
+        select.style-select {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--panel-border);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            outline: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- 3D Viewport -->
-    <div id="canvas-container"></div>
+    <!-- Header Controls -->
+    <header>
+        <div class="header-title">
+            <h1>ONOMAPET SEISMOGRAPH</h1>
+            <span class="badge-tag">2D ANALYZER</span>
+        </div>
 
-    <!-- UI Overlay -->
-    <div class="ui-overlay">
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <div class="header">
-                <h1>OnomaPet v.0<span class="author-name">by Richi Owaki</span></h1>
+        <div class="controls-main">
+            <!-- Scrollable Registered Word Selector -->
+            <select id="scroll-word-select" class="scroll-select">
+                <option value="">-- 登録単語を選択 --</option>
+            </select>
+
+            <!-- Search Input Box -->
+            <div class="search-box">
+                <input type="text" id="onomato-input" class="search-input" list="onomato-list" placeholder="オノマトペを入力（例: がたがた）...">
+                <datalist id="onomato-list"></datalist>
             </div>
 
-            <!-- Input Group -->
-            <div class="input-group">
-                <div class="input-row">
-                    <button class="btn-clear" id="btn-clear">X</button>
-                    <input type="text" id="onomato-input" placeholder="例: ふわふわ, ぱっ..." list="onomato-list" autocomplete="off">
-                    <datalist id="onomato-list"></datalist>
-                    <button class="btn-primary" id="btn-execute">実行</button>
-                </div>
-                <button class="btn-secondary" id="btn-random" style="width: 100%;">ランダム</button>
+            <!-- Tempo BPM Slider -->
+            <div class="bpm-control" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; background: rgba(30, 41, 59, 0.8); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--panel-border);">
+                <span style="color: var(--text-secondary); font-weight: 600;">TEMPO:</span>
+                <input type="range" id="slider-bpm" min="40" max="135" value="65" style="width: 90px; cursor: pointer;">
+                <span id="badge-bpm" style="font-family: monospace; font-weight: 700; color: #38bdf8;">65 BPM</span>
             </div>
 
-            <!-- Active Parameters (Unified Container) -->
-            <div class="info-section" id="info-section" style="display: none;">
-                <div class="param-container">
-                    <div class="param-cat">
-                        <div class="cat-header">Cat A: Laban Effort</div>
-                        <div class="cat-body">
-                            重さ(x1): <span id="val-x1">0</span> | 
-                            時間(x2): <span id="val-x2">0</span> | 
-                            空間(x3): <span id="val-x3">0</span> | 
-                            流れ(x4): <span id="val-x4">0</span>
-                        </div>
-                    </div>
-                    <div class="param-cat">
-                        <div class="cat-header">Cat B: Acoustic Physics</div>
-                        <div class="cat-body">
-                            硬さ(x5): <span id="val-x5">0</span> | 
-                            湿気(x6): <span id="val-x6">0</span> | 
-                            音高(x7): <span id="val-x7">0</span> | 
-                            減衰(x8): <span id="val-x8">0</span>
-                        </div>
-                    </div>
-                    <div class="param-cat">
-                        <div class="cat-header">Cat C: Extended Sensory</div>
-                        <div class="cat-body">
-                            摩擦(x9): <span id="val-x9">0</span> | 
-                            歪み(x10): <span id="val-x10">0</span> | 
-                            温度(x11): <span id="val-x11">0</span>
-                        </div>
-                    </div>
-                    <div class="param-cat">
-                        <div class="cat-header">Cat D: Phrasing & Meter</div>
-                        <div class="cat-body">
-                            強弱(x13): <span id="val-x13">0</span> | 
-                            音調(x14): <span id="val-x14">0</span> | 
-                            拍数(x15): <span id="val-x15">0</span> | 
-                            規則(x16): <span id="val-x16">0</span>
-                        </div>
-                    </div>
+            <button id="btn-execute" class="btn">解析実行</button>
+            <button id="btn-random" class="btn btn-secondary">ランダム</button>
+            <button id="btn-clear" class="btn btn-secondary">クリア</button>
+            <button id="btn-sound" class="btn btn-toggle active">SOUND ON</button>
+            <button id="btn-test-audio" class="btn btn-secondary">🔊 音声テスト</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+        
+        <!-- Left Sidebar: Vector Readouts -->
+        <div class="sidebar">
+            <div class="panel-card">
+                <div class="card-header">
+                    <span class="card-title">解析対象データ</span>
+                    <span id="color-badge" class="color-preview-badge" style="background-color: #6366f1;"></span>
                 </div>
+                <div id="info-word" class="word-display">----</div>
+                <div id="info-ipa" class="ipa-display">[ - ]</div>
+                <p id="info-rationale" class="rationale-text">単語を選択または入力すると、オノマトペの物理・音響ベクトルが全チャンネルに展開されます。</p>
+            </div>
+
+            <!-- Source-Filter Kinematic Taxonomy -->
+            <div class="panel-card">
+                <div class="card-header">
+                    <span class="card-title">音源・調音・運動分類 (Source-Filter)</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">発声部位 (Articulatory)</span>
+                    <span id="tax-center" class="metric-value" style="color: #38bdf8;">CENTRAL</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">音源タイプ (Source)</span>
+                    <span id="tax-source" class="metric-value" style="color: #fb923c;">PERIODIC</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">打撃特性 (Impulse)</span>
+                    <span id="tax-impulse" class="metric-value" style="color: #4ade80;">WAVE</span>
+                </div>
+            </div>
+
+            <!-- Effort Parameters -->
+            <div class="panel-card">
+                <div class="card-header">
+                    <span class="card-title">Laban Effort (運動特性)</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">重さ / Weight (x1)</span>
+                    <span id="val-x1" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x1" class="progress-fill" style="width: 55%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">時間 / Time (x2)</span>
+                    <span id="val-x2" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x2" class="progress-fill" style="width: 55%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">空間 / Space (x3)</span>
+                    <span id="val-x3" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x3" class="progress-fill" style="width: 55%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">流動 / Flow (x4)</span>
+                    <span id="val-x4" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x4" class="progress-fill" style="width: 55%;"></div></div>
+            </div>
+
+            <!-- Acoustic Parameters -->
+            <div class="panel-card">
+                <div class="card-header">
+                    <span class="card-title">Acoustic & Extended</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">硬さ / Hardness (x5)</span>
+                    <span id="val-x5" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x5" class="progress-fill" style="width: 55%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">乱流 / Reynolds (x9)</span>
+                    <span id="val-x9" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x9" class="progress-fill" style="width: 55%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">減衰 / Decay (x8)</span>
+                    <span id="val-x8" class="metric-value">5.0</span>
+                </div>
+                <div class="progress-bar"><div id="fill-x8" class="progress-fill" style="width: 55%;"></div></div>
+            </div>
+        </div>
+
+        <!-- Right Viewport: Seismograph Canvas -->
+        <div class="seismograph-container">
+            <canvas id="seismograph-canvas"></canvas>
+
+            <!-- Bottom Floating Control Bar -->
+            <div class="seismo-footer">
+                <button id="btn-play-pause" class="btn btn-secondary">PAUSE</button>
+                <select id="select-theme" class="style-select">
+                    <option value="dark">Dark Sci-Fi</option>
+                    <option value="paper">Analog Paper (白記録紙)</option>
+                </select>
+                <select id="select-window" class="style-select">
+                    <option value="4">表示: 4秒</option>
+                    <option value="8" selected>表示: 8秒</option>
+                    <option value="15">表示: 15秒</option>
+                </select>
             </div>
         </div>
     </div>
 
-    <div class="instructions">
-        ドラッグで<span>回転</span> | ピンチで<span>ズーム</span>
+    <!-- Bottom Section: 10 Moving Point Variations Visual Gallery -->
+    <div class="ten-variations-section">
+        <div class="gallery-title">
+            <span>✨ 10種動点バリエーション比較ギャラリー (10 MOVING POINT VARIATIONS)</span>
+            <span class="gallery-subtitle">言葉の印象・音素に応じて10個の独立した動点ボールが異なる物理軌道を描きます</span>
+        </div>
+        <div id="ten-variations-grid" class="ten-grid-container"></div>
     </div>
 
-    <script src="three.min.js?v=2"></script>
-    <script src="OrbitControls.js?v=2"></script>
-    <script src="onomatopoeia_dictionary.js?v=2"></script>
-    <script src="app.js?v=5"></script>
+    <!-- Scripts -->
+    <script src="onomatopoeia_dictionary.js"></script>
+    <script src="js/OnomaPetDictionary.js"></script>
+    <script src="js/OnomaPetKinematics.js"></script>
+    <script src="js/OnomaPetPhysics.js"></script>
+    <script src="js/OnomaPetSynth.js"></script>
+    <script src="js/OnomaPetEngine.js"></script>
+    <script src="js/SeismographRenderer.js"></script>
+    <script src="js/TenVariationsGallery.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

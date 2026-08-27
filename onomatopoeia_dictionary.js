@@ -31325,3 +31325,7 @@ const ONOMA_DICT = [
     "morph_type": "COMPOUND(複合・異種)"
   }
 ];
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ONOMA_DICT;
+}
