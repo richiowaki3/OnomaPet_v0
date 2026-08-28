@@ -354,13 +354,13 @@ class OnomaPetPhysics {
                     // N1..N4 Surface Plane Nodes: Released +10% Vertical Offset
                     const phaseSign = (i === 1 || i === 3) ? 1.0 : -1.0;
 
-                    // --- 3. TOP-DOWN VISCOUS GEOMETRY MORPHING ---
+                    // --- 3. TOP-DOWN VISCOUS GEOMETRY MORPHING (水平X-Y面の運動制限を全解放) ---
                     const spaceRatio = sp / 9.0;
                     const flowDamping = 0.5 + (fl / 9.0) * 0.5;
 
-                    const diamondK = (hd / 9.0) * 0.45 * Math.sin(this.animationTime * 2.2 * flowDamping);
-                    const rectK = (nodeMora.isLong ? 0.45 : 0.2) * Math.sin(this.animationTime * 1.8 * flowDamping);
-                    const shearK = (1.0 - spaceRatio) * 0.4 * Math.cos(this.animationTime * 2.0 * flowDamping);
+                    const diamondK = (hd / 9.0) * 0.65 * Math.sin(this.animationTime * 2.5 * flowDamping);
+                    const rectK = (nodeMora.isLong ? 0.6 : 0.3) * Math.sin(this.animationTime * 2.0 * flowDamping);
+                    const shearK = (1.0 - spaceRatio) * 0.55 * Math.cos(this.animationTime * 2.2 * flowDamping);
 
                     let targetX = base.x * (1.0 + diamondK);
                     let targetZ = base.z * (1.0 - diamondK);
@@ -374,44 +374,46 @@ class OnomaPetPhysics {
 
                     switch (domChannel) {
                         case 0: // 1. 瞬発衝撃バースト
-                            filterModY = phaseSign * ch2MotorY * 0.66;
+                            filterModY = phaseSign * ch2MotorY * 0.72;
+                            filterModScale = 1.25; // Dynamic horizontal expansion
                             break;
                         case 1: // 2. 旋回うねり波
-                            filterModY = Math.sin(this.animationTime * 3.0 + i * 1.5) * 0.50 * domGain;
+                            filterModY = Math.sin(this.animationTime * 3.0 + i * 1.5) * 0.55 * domGain;
+                            filterModScale = 1.2;
                             break;
                         case 2: // 3. 重厚たわみ沈み込み
-                            filterModY = -0.60 * domGain;
+                            filterModY = -0.65 * domGain;
                             break;
                         case 3: // 4. 粒状コロコロ転がり
-                            filterModY = phaseSign * Math.sin(this.animationTime * 8.0 + i) * 0.40 * domGain;
+                            filterModY = phaseSign * Math.sin(this.animationTime * 8.0 + i) * 0.45 * domGain;
                             break;
                         case 4: // 5. 呼吸・脈動プレッシャー
-                            filterModScale = 1.0 + Math.sin(this.animationTime * 4.0) * 0.38 * domGain;
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 4.0) * 0.45 * domGain;
                             break;
                         case 5: // 6. 粘性スライム (Viscous Slime)
-                            filterModY = phaseSign * Math.sin(this.animationTime * 1.5 + i) * 0.50 * domGain;
-                            filterModScale = 1.0 + Math.sin(this.animationTime * 1.5) * 0.33 * domGain;
+                            filterModY = phaseSign * Math.sin(this.animationTime * 1.5 + i) * 0.55 * domGain;
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 1.5) * 0.4 * domGain;
                             break;
                         case 6: // 7. 振り子スイング
-                            filterModY = Math.sin(this.animationTime * 2.5 + i * 1.2) * 0.44 * domGain;
+                            filterModY = Math.sin(this.animationTime * 2.5 + i * 1.2) * 0.5 * domGain;
                             break;
                         case 7: // 8. 水滴散乱
-                            filterModY = (Math.random() - 0.5) * 0.40 * domGain;
+                            filterModY = (Math.random() - 0.5) * 0.45 * domGain;
                             break;
                         case 8: // 9. 粒子高周波ジッター
-                            filterModY = Math.sin(this.animationTime * 35.0 + i * 11.0) * 0.28 * domGain;
+                            filterModY = Math.sin(this.animationTime * 35.0 + i * 11.0) * 0.3 * domGain;
                             break;
                         case 9: // 10. 一方通行直線スライド
-                            targetX += domGain * 1.3 * Math.sin(this.animationTime * 1.8);
+                            targetX += domGain * 1.6 * Math.sin(this.animationTime * 1.8);
                             break;
                     }
 
                     targetX *= filterModScale;
                     targetZ *= filterModScale;
 
-                    // Released relative height Y (+10%)
-                    const relHeightY = (phaseSign * ch2MotorY * 0.44 + filterModY) * this.amplitudeScale;
-                    const springStiffness = 3.5;
+                    // Released height offset (+10%)
+                    const relHeightY = (phaseSign * ch2MotorY * 0.48 + filterModY) * this.amplitudeScale;
+                    const springStiffness = 4.0;
 
                     this.forces[i].x += (flightX + targetX - pos.x) * springStiffness;
                     this.forces[i].y += (flightY + relHeightY - pos.y) * springStiffness;
@@ -422,7 +424,7 @@ class OnomaPetPhysics {
                 if (isPlosive && moraProgress < 0.15 && !nodeMora.isPause) {
                     const burstProgress = moraProgress / 0.15;
                     const burstEnv = Math.sin(burstProgress * Math.PI) * Math.exp(-burstProgress * 2.5);
-                    const burstF = burstEnv * forceAmp * 0.66;
+                    const burstF = burstEnv * forceAmp * 0.7;
                     this.forces[i].y += burstF;
                 }
 
@@ -440,7 +442,7 @@ class OnomaPetPhysics {
                 this.currentPositions[i].y += this.velocities[i].y * dt;
                 this.currentPositions[i].z += this.velocities[i].z * dt;
 
-                // --- 5. TIGHT HEIGHT BOUNDARY CONSTRAINT (高さの1割解放: [-1.45, +1.45]) ---
+                // --- 5. TIGHT HEIGHT BOUNDARY CONSTRAINT (高さのみ厳密制限: [-1.45, +1.45]) ---
                 const maxAbsY = 1.45;
                 if (this.currentPositions[i].y > maxAbsY) {
                     this.currentPositions[i].y = maxAbsY;
@@ -450,8 +452,8 @@ class OnomaPetPhysics {
                     this.velocities[i].y *= 0.2;
                 }
 
-                // 3D Spherical Bounding Constraint (R <= 2.5)
-                const maxRadius = 2.5;
+                // Horizontal Spherical Bounding Constraint (R <= 3.2: 水平方向はゆったり全解放)
+                const maxRadius = 3.2;
                 const curDist = Math.sqrt(
                     this.currentPositions[i].x * this.currentPositions[i].x +
                     this.currentPositions[i].y * this.currentPositions[i].y +
@@ -460,11 +462,9 @@ class OnomaPetPhysics {
                 if (curDist > maxRadius) {
                     const clampFactor = maxRadius / curDist;
                     this.currentPositions[i].x *= clampFactor;
-                    this.currentPositions[i].y *= clampFactor;
                     this.currentPositions[i].z *= clampFactor;
-                    this.velocities[i].x *= 0.5;
-                    this.velocities[i].y *= 0.5;
-                    this.velocities[i].z *= 0.5;
+                    this.velocities[i].x *= 0.6;
+                    this.velocities[i].z *= 0.6;
                 }
             }
         }
