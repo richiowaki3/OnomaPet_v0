@@ -253,18 +253,43 @@ class NodeMesh3DRenderer {
     }
 
     drawGroundPlane(cx, cy) {
-        const gridR = 3.2;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        const groundY = -2.2;
+        const gridSize = 8; // 8x8 Checkerboard Tiles (市松模様)
+        const tileSize = 0.85;
+        const halfG = (gridSize * tileSize) / 2;
+
         this.ctx.lineWidth = 1;
 
-        for (let i = -3; i <= 3; i += 2) {
-            const p1 = this.project(i * 0.9, -2.5, -gridR, cx, cy);
-            const p2 = this.project(i * 0.9, -2.5, gridR, cx, cy);
-            this.ctx.beginPath(); this.ctx.moveTo(p1.sx, p1.sy); this.ctx.lineTo(p2.sx, p2.sy); this.ctx.stroke();
+        for (let ix = 0; ix < gridSize; ix++) {
+            for (let iz = 0; iz < gridSize; iz++) {
+                const x1 = -halfG + ix * tileSize;
+                const x2 = x1 + tileSize;
+                const z1 = -halfG + iz * tileSize;
+                const z2 = z1 + tileSize;
 
-            const p3 = this.project(-gridR, -2.5, i * 0.9, cx, cy);
-            const p4 = this.project(gridR, -2.5, i * 0.9, cx, cy);
-            this.ctx.beginPath(); this.ctx.moveTo(p3.sx, p3.sy); this.ctx.lineTo(p4.sx, p4.sy); this.ctx.stroke();
+                // Project 4 corners of the 3D tile to 2D Screen Coordinates
+                const p1 = this.project(x1, groundY, z1, cx, cy);
+                const p2 = this.project(x2, groundY, z1, cx, cy);
+                const p3 = this.project(x2, groundY, z2, cx, cy);
+                const p4 = this.project(x1, groundY, z2, cx, cy);
+
+                // Checkerboard Alternating Fill Colors (市松模様)
+                const isEven = (ix + iz) % 2 === 0;
+                this.ctx.fillStyle = isEven
+                    ? 'rgba(30, 41, 59, 0.45)'  // Bright Slate Tile
+                    : 'rgba(15, 23, 42, 0.20)';  // Dark Tile
+
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'; // Crisp Tile Border
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(p1.sx, p1.sy);
+                this.ctx.lineTo(p2.sx, p2.sy);
+                this.ctx.lineTo(p3.sx, p3.sy);
+                this.ctx.lineTo(p4.sx, p4.sy);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
         }
     }
 
