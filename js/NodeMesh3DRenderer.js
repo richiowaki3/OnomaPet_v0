@@ -13,9 +13,9 @@ class NodeMesh3DRenderer {
         this.ctx = this.canvas.getContext('2d');
 
         // Camera Orbit Angles
-        this.rotX = 0.42;
+        this.rotX = 0.52; // Slightly higher top-down perspective
         this.rotY = 0.55;
-        this.distance = 6.8;
+        this.distance = 7.5; // Generous viewport padding
         this.fov = 420;
 
         // Interactive Orbit Dragging
