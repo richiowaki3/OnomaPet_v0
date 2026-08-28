@@ -302,7 +302,6 @@ class OnomaPetPhysics {
                 const isBee = /[ぶんころがたぽろブンコロガタポロ]/.test(wordText) || (rg >= 6 && hd >= 6);
                 
                 let flightX = 0, flightY = 0, flightZ = 0;
-                let wingFlap = 0;
                 let flightMode = 'BUTTERFLY';
 
                 if (isButterfly) {
@@ -310,23 +309,41 @@ class OnomaPetPhysics {
                     flightX = Math.sin(this.animationTime * 1.2) * 2.2 * this.spatialScale;
                     flightY = Math.sin(this.animationTime * 2.4) * 1.3 * this.amplitudeScale;
                     flightZ = Math.cos(this.animationTime * 1.2) * 2.2 * this.spatialScale;
-                    wingFlap = Math.sin(this.animationTime * 4.5) * 0.8;
                 } else if (isBee) {
                     flightMode = 'BEE';
                     flightX = Math.cos(this.animationTime * 3.5) * 1.5 * this.spatialScale;
                     flightY = Math.sin(this.animationTime * 7.0) * 0.8 * this.amplitudeScale;
                     flightZ = Math.sin(this.animationTime * 3.5) * 1.5 * this.spatialScale;
-                    wingFlap = Math.sin(this.animationTime * 18.0) * 0.5;
                 } else {
                     flightMode = 'FLY';
                     const stepT = Math.floor(this.animationTime * 3.2);
                     flightX = Math.sin(stepT * 1.7) * 1.8 * this.spatialScale;
                     flightY = Math.cos(stepT * 2.3) * 1.1 * this.amplitudeScale;
                     flightZ = Math.sin(stepT * 3.1) * 1.8 * this.spatialScale;
-                    wingFlap = (Math.random() - 0.5) * 0.9;
                 }
 
                 this.activeFlightMode = flightMode;
+
+                // --- 1. CH-2 BASE DRIVER (モータ・推進力ベース軸) ---
+                const ch2Power = (12.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
+                const ch2MotorY = driveEnvelope * ch2Power;
+
+                // --- 2. DOMINANT KINEMATIC VARIATION FILTER (支配的動点モードスイッチ) ---
+                const vols = (typeof OnomaPetKinematics !== 'undefined' && this.activeWord)
+                    ? OnomaPetKinematics.calculateVolumeMatrix(this.activeWord)
+                    : new Array(10).fill(128);
+
+                // Find single dominant variation channel (相殺を防ぐための支配モード特定)
+                let maxVol = -1, domChannel = 0;
+                for (let vIdx = 0; vIdx < 10; vIdx++) {
+                    if (vols[vIdx] > maxVol) {
+                        maxVol = vols[vIdx];
+                        domChannel = vIdx;
+                    }
+                }
+                const domGain = maxVol / 255.0;
+
+                this.activeDominantChannel = domChannel; // Expose for HUD UI
 
                 if (i === 0) {
                     // N0: Center 3D Trajectory Flight Node (CH-1 Driver)
@@ -335,19 +352,16 @@ class OnomaPetPhysics {
                     this.forces[i].z += (flightZ - pos.z) * 3.5;
                     primaryDrivingY = flightY;
                 } else {
-                    // --- N1..N4 Surface Plane Nodes: DIRECTLY DRIVEN BY CH-2 MOTOR FORCE ---
-                    // Phase Sign: N1, N3 -> +1.0 (+Y UP Kick), N2, N4 -> -1.0 (-Y DOWN Pull)
+                    // N1..N4 Surface Plane Nodes: Driven by CH-2 Base + Dominant Filter
                     const phaseSign = (i === 1 || i === 3) ? 1.0 : -1.0;
 
-                    // CH-2 High-Power Motor Drive Force & Impulse Envelope
-                    const ch2Power = (25.0 + w * 45.0) * nodeMora.accentFactor * this.amplitudeScale;
-                    const ch2MotorY = phaseSign * driveEnvelope * ch2Power * 0.95;
-
-                    // Top-Down Geometric Morphing (Square -> Diamond -> Rectangle -> Parallelogram)
+                    // --- 3. TOP-DOWN VISCOUS GEOMETRY MORPHING (俯瞰・ゆっくりとした粘性広がり) ---
                     const spaceRatio = sp / 9.0;
-                    const diamondK = (hd / 9.0) * 0.6 * Math.sin(this.animationTime * 3.5);
-                    const rectK = (nodeMora.isLong ? 0.5 : 0.25) * Math.sin(this.animationTime * 2.5);
-                    const shearK = (1.0 - spaceRatio) * 0.5 * Math.cos(this.animationTime * 2.8);
+                    const flowDamping = 0.5 + (fl / 9.0) * 0.5; // Viscous Flow Filter
+
+                    const diamondK = (hd / 9.0) * 0.45 * Math.sin(this.animationTime * 2.2 * flowDamping);
+                    const rectK = (nodeMora.isLong ? 0.45 : 0.2) * Math.sin(this.animationTime * 1.8 * flowDamping);
+                    const shearK = (1.0 - spaceRatio) * 0.4 * Math.cos(this.animationTime * 2.0 * flowDamping);
 
                     let targetX = base.x * (1.0 + diamondK);
                     let targetZ = base.z * (1.0 - diamondK);
@@ -355,11 +369,49 @@ class OnomaPetPhysics {
                     targetZ *= (1.0 - rectK);
                     targetX += targetZ * shearK;
 
-                    // High-Contrast CH-2 Motor Vertical Offset relative to N0 (flightY)
-                    const relHeightY = ch2MotorY + (phaseSign * Math.sin(this.animationTime * 5.0) * 1.5);
+                    // --- 4. APPLY DOMINANT KINEMATIC VARIATION MODULATION ---
+                    let filterModY = 0;
+                    let filterModScale = 1.0;
 
-                    // High-Responsiveness Spring Stiffness
-                    const springStiffness = 5.5;
+                    switch (domChannel) {
+                        case 0: // 1. 瞬発衝撃バースト
+                            filterModY = phaseSign * ch2MotorY * 1.4;
+                            break;
+                        case 1: // 2. 旋回うねり波
+                            filterModY = Math.sin(this.animationTime * 3.0 + i * 1.5) * 1.8 * domGain;
+                            break;
+                        case 2: // 3. 重厚たわみ沈み込み
+                            filterModY = -2.2 * domGain; // Deep bowing
+                            break;
+                        case 3: // 4. 粒状コロコロ転がり
+                            filterModY = phaseSign * Math.sin(this.animationTime * 8.0 + i) * 1.2 * domGain;
+                            break;
+                        case 4: // 5. 呼吸・脈動プレッシャー
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 4.0) * 0.4 * domGain;
+                            break;
+                        case 5: // 6. 粘性スライム (Viscous Slime)
+                            filterModY = phaseSign * Math.sin(this.animationTime * 1.5 + i) * 1.5 * domGain;
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 1.5) * 0.35 * domGain;
+                            break;
+                        case 6: // 7. 振り子スイング
+                            filterModY = Math.sin(this.animationTime * 2.5 + i * 1.2) * 1.6 * domGain;
+                            break;
+                        case 7: // 8. 水滴散乱
+                            filterModY = (Math.random() - 0.5) * 1.4 * domGain;
+                            break;
+                        case 8: // 9. 粒子高周波ジッター
+                            filterModY = Math.sin(this.animationTime * 35.0 + i * 11.0) * 0.8 * domGain;
+                            break;
+                        case 9: // 10. 一方通行直線スライド
+                            targetX += domGain * 1.4 * Math.sin(this.animationTime * 1.8);
+                            break;
+                    }
+
+                    targetX *= filterModScale;
+                    targetZ *= filterModScale;
+
+                    const relHeightY = (phaseSign * ch2MotorY * 0.8 + filterModY) * this.amplitudeScale;
+                    const springStiffness = 3.5;
 
                     this.forces[i].x += (flightX + targetX - pos.x) * springStiffness;
                     this.forces[i].y += (flightY + relHeightY - pos.y) * springStiffness;
@@ -370,7 +422,7 @@ class OnomaPetPhysics {
                 if (isPlosive && moraProgress < 0.15 && !nodeMora.isPause) {
                     const burstProgress = moraProgress / 0.15;
                     const burstEnv = Math.sin(burstProgress * Math.PI) * Math.exp(-burstProgress * 2.5);
-                    const burstF = burstEnv * forceAmp * 2.0;
+                    const burstF = burstEnv * forceAmp * 1.5;
                     this.forces[i].y += burstF;
                 }
 
@@ -380,21 +432,30 @@ class OnomaPetPhysics {
                 const ay = this.forces[i].y / mass;
                 const az = this.forces[i].z / mass;
 
-                this.velocities[i].x += ax * stepDt;
-                this.velocities[i].y += ay * stepDt;
-                this.velocities[i].z += az * stepDt;
+                this.velocities[i].x = (this.velocities[i].x + ax * dt) * 0.88;
+                this.velocities[i].y = (this.velocities[i].y + ay * dt) * 0.88;
+                this.velocities[i].z = (this.velocities[i].z + az * dt) * 0.88;
 
-                const maxSpeed = 15.0 * this.amplitudeScale;
-                const speed = Math.sqrt(this.velocities[i].x ** 2 + this.velocities[i].y ** 2 + this.velocities[i].z ** 2);
-                if (speed > maxSpeed) {
-                    this.velocities[i].x = (this.velocities[i].x / speed) * maxSpeed;
-                    this.velocities[i].y = (this.velocities[i].y / speed) * maxSpeed;
-                    this.velocities[i].z = (this.velocities[i].z / speed) * maxSpeed;
+                this.currentPositions[i].x += this.velocities[i].x * dt;
+                this.currentPositions[i].y += this.velocities[i].y * dt;
+                this.currentPositions[i].z += this.velocities[i].z * dt;
+
+                // 3D Spatial Bounding Constraint (Clamp inside bounding sphere R <= 2.6)
+                const maxRadius = 2.6;
+                const curDist = Math.sqrt(
+                    this.currentPositions[i].x * this.currentPositions[i].x +
+                    this.currentPositions[i].y * this.currentPositions[i].y +
+                    this.currentPositions[i].z * this.currentPositions[i].z
+                );
+                if (curDist > maxRadius) {
+                    const clampFactor = maxRadius / curDist;
+                    this.currentPositions[i].x *= clampFactor;
+                    this.currentPositions[i].y *= clampFactor;
+                    this.currentPositions[i].z *= clampFactor;
+                    this.velocities[i].x *= 0.5;
+                    this.velocities[i].y *= 0.5;
+                    this.velocities[i].z *= 0.5;
                 }
-
-                this.currentPositions[i].x += this.velocities[i].x * stepDt;
-                this.currentPositions[i].y += this.velocities[i].y * stepDt;
-                this.currentPositions[i].z += this.velocities[i].z * stepDt;
             }
         }
 

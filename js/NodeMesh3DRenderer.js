@@ -232,10 +232,24 @@ class NodeMesh3DRenderer {
         this.ctx.fillStyle = modeCol;
         this.ctx.fillText(`CH-1 飛翔軌道 N0: ${modeText}`, 12, 36);
 
+        // Render Active Dominant Kinematic Variation Filter Badge
+        const domChannel = physicsEngine.activeDominantChannel !== undefined ? physicsEngine.activeDominantChannel : 0;
+        const domNames = [
+            '1. 瞬発衝撃バースト', '2. 旋回うねり波', '3. 重厚たわみ沈み込み', '4. 粒状コロコロ転がり', '5. 呼吸・脈動プレッシャー',
+            '6. 粘性スライム (Viscous Slime)', '7. 振り子スイング', '8. 水滴散乱', '9. 粒子高周波ジッター', '10. 直線スライド'
+        ];
+        const domCols = ['#ef4444', '#38bdf8', '#a855f7', '#fb923c', '#4ade80', '#c084fc', '#f59e0b', '#06b6d4', '#f43f5e', '#6366f1'];
+        const domName = domNames[domChannel] || '1. 瞬発衝撃バースト';
+        const domCol = domCols[domChannel] || '#38bdf8';
+
+        this.ctx.font = '700 11px monospace';
+        this.ctx.fillStyle = domCol;
+        this.ctx.fillText(`支配的動点モード (N1..N4): ${domName}`, 12, 54);
+
         // Header Title
         this.ctx.font = '600 11px "Outfit", sans-serif';
         this.ctx.fillStyle = '#a5b4fc';
-        this.ctx.fillText('5-NODE 3D MESH (N0: CH-1飛翔中心ノード ＋ N1..N4: 四頂点・面構成ノード)', 12, 18);
+        this.ctx.fillText('5-NODE 3D MESH (CH-2ベース ＋ 支配的動点フィルター ＋ 空間バウンダリ制限)', 12, 18);
     }
 
     drawGroundPlane(cx, cy) {

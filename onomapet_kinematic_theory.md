@@ -9,18 +9,17 @@
 
 ---
 
-## 2. 4ノード 3D 昆虫飛翔・羽運動モデル (CH-1 Insect Wing Kinematic Flight Engine)
+## 2. 5ノード 3D レイヤード変調モデル (CH-2 Base + Dominant Kinematic Variation Filter)
 
-ユーザーの生物・運動美学に基づき、CH-1 を **4ノード全体の 3D 空間飛行＆相対羽運動 (Insect Wing Flight Engine)** として再設計・実装しました：
+単純平均によるパラメータ相殺を撤廃し、**CH-2 をベース軸として「支配的動点モード (Dominant Kinematic Variation Filter)」をレイヤー上書き変調**する段階的力学モデルへ刷新しました：
 
-$$\vec{P}_i(t) = \vec{C}_{\text{flight}}(t) + \vec{W}_{\text{flapping}, i}(t) + \vec{M}_{\text{morphing}, i}(t)$$
+$$\vec{P}_i(t) = \vec{C}_{\text{CH1飛翔}}(t) + \text{Clamp}_{\text{Sphere}}\left(\vec{Y}_{\text{CH2ベース}, i}(t) + \vec{F}_{\text{支配的動点モード}, i}(t) + \vec{M}_{\text{粘性幾何変形}, i}(t)\right)$$
 
-- **原点周辺の空間バウンダリ ($R \in [0.5, 2.5]$)**: 原点 $(0,0,0)$ から離れすぎず、遠ざかりすぎず、3D 空間内をあちこち自在に旋回飛行。
-- **音象徴に応じた「3つの昆虫飛翔スタイル」**:
-  1. **蝶フライト (Butterfly Flight / 🦋)**: 「ふわふわ」「ゆらーり」「ひらひら」。ゆっくり大振りの羽ばたき（$1.5\text{Hz}$）と優雅な 8 の字・リサージュ 3D 旋回。
-  2. **蜂ホバリング (Bumblebee Flight / 🐝)**: 「ぶんぶん」「ころころ」「がたがた」。高周波な細かな羽ばたき（$6.0\text{Hz}$）と、空間の定点ドームホバリング旋回。
-  3. **ハエジッター (Fly Flight / 🪰)**: 「バシッ」「さらさら」「カチカチ」。急停止 $\rightarrow$ 直角にカクッと方向転換する不規則・ランダムアタック飛行。
-- **相対羽ばたき運動 ($\vec{W}_{\text{flapping}}$)**: 左翼（N0, N3）$\leftrightarrow$ 右翼（N1, N2）が互い違いに羽ばたき運動。
+1. **3D 空間バウンダリ制限 (Spatial Bounding Clamp $R \le 2.5$)**:
+   - ノードが画面キャンバスからはみ出るのを完全遮断し、常に画面内で美しい立体運動を維持。
+2. **相殺を防ぐ「支配的動点モードスイッチ (Dominant Kinematic Variation Filter)」**:
+   - 10チャンネルの動点ボリューム（$\text{VOL}_1 \sim \text{VOL}_{10}$）を単純加算せず、言葉ごとに最もエネルギーの高い**「支配的動点チャンネル (Dominant Channel)」を特定してレイヤー変調**。
+   - 俯瞰視点で評価の高い**「ゆっくりとした粘性のある滑走・しなり (Viscous Flow Morphing)」**を基調とし、バースト・うねり・沈み込み・脈動・スライム等の質感を鮮明に上書き。
 
 ---
 
