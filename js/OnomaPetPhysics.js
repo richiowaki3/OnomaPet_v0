@@ -307,25 +307,25 @@ class OnomaPetPhysics {
                 if (isButterfly) {
                     flightMode = 'BUTTERFLY';
                     flightX = Math.sin(this.animationTime * 1.2) * 2.0 * this.spatialScale;
-                    flightY = Math.sin(this.animationTime * 2.4) * 0.45 * this.amplitudeScale; // Subdued Y flight
+                    flightY = Math.sin(this.animationTime * 2.4) * 0.50 * this.amplitudeScale; // Released +10%
                     flightZ = Math.cos(this.animationTime * 1.2) * 2.0 * this.spatialScale;
                 } else if (isBee) {
                     flightMode = 'BEE';
                     flightX = Math.cos(this.animationTime * 3.5) * 1.4 * this.spatialScale;
-                    flightY = Math.sin(this.animationTime * 7.0) * 0.3 * this.amplitudeScale; // Subdued Y flight
+                    flightY = Math.sin(this.animationTime * 7.0) * 0.33 * this.amplitudeScale; // Released +10%
                     flightZ = Math.sin(this.animationTime * 3.5) * 1.4 * this.spatialScale;
                 } else {
                     flightMode = 'FLY';
                     const stepT = Math.floor(this.animationTime * 3.2);
                     flightX = Math.sin(stepT * 1.7) * 1.6 * this.spatialScale;
-                    flightY = Math.cos(stepT * 2.3) * 0.4 * this.amplitudeScale; // Subdued Y flight
+                    flightY = Math.cos(stepT * 2.3) * 0.44 * this.amplitudeScale; // Released +10%
                     flightZ = Math.sin(stepT * 3.1) * 1.6 * this.spatialScale;
                 }
 
                 this.activeFlightMode = flightMode;
 
-                // --- 1. CH-2 BASE DRIVER (モータ・推進力ベース軸: 高さを大幅抑制) ---
-                const ch2Power = (3.5 + w * 5.0) * nodeMora.accentFactor * this.amplitudeScale;
+                // --- 1. CH-2 BASE DRIVER (モータ・推進力ベース軸: 高さを1割解放) ---
+                const ch2Power = (3.85 + w * 5.5) * nodeMora.accentFactor * this.amplitudeScale;
                 const ch2MotorY = driveEnvelope * ch2Power;
 
                 // --- 2. DOMINANT KINEMATIC VARIATION FILTER (支配的動点モードスイッチ) ---
@@ -336,7 +336,7 @@ class OnomaPetPhysics {
                 let maxVol = -1, domChannel = 0;
                 for (let vIdx = 0; vIdx < 10; vIdx++) {
                     if (vols[vIdx] > maxVol) {
-                        maxVol = vols[vols[vIdx] > maxVol ? vIdx : domChannel];
+                        maxVol = vols[vIdx];
                         domChannel = vIdx;
                     }
                 }
@@ -351,10 +351,10 @@ class OnomaPetPhysics {
                     this.forces[i].z += (flightZ - pos.z) * 3.5;
                     primaryDrivingY = flightY;
                 } else {
-                    // N1..N4 Surface Plane Nodes: Subdued Vertical Offset
+                    // N1..N4 Surface Plane Nodes: Released +10% Vertical Offset
                     const phaseSign = (i === 1 || i === 3) ? 1.0 : -1.0;
 
-                    // --- 3. TOP-DOWN VISCOUS GEOMETRY MORPHING (俯瞰・ゆっくりとした粘性広がり) ---
+                    // --- 3. TOP-DOWN VISCOUS GEOMETRY MORPHING ---
                     const spaceRatio = sp / 9.0;
                     const flowDamping = 0.5 + (fl / 9.0) * 0.5;
 
@@ -368,49 +368,49 @@ class OnomaPetPhysics {
                     targetZ *= (1.0 - rectK);
                     targetX += targetZ * shearK;
 
-                    // --- 4. APPLY SUBDUED DOMINANT KINEMATIC VARIATION MODULATION ---
+                    // --- 4. APPLY RELEASED +10% DOMINANT KINEMATIC VARIATION MODULATION ---
                     let filterModY = 0;
                     let filterModScale = 1.0;
 
                     switch (domChannel) {
                         case 0: // 1. 瞬発衝撃バースト
-                            filterModY = phaseSign * ch2MotorY * 0.6;
+                            filterModY = phaseSign * ch2MotorY * 0.66;
                             break;
                         case 1: // 2. 旋回うねり波
-                            filterModY = Math.sin(this.animationTime * 3.0 + i * 1.5) * 0.45 * domGain;
+                            filterModY = Math.sin(this.animationTime * 3.0 + i * 1.5) * 0.50 * domGain;
                             break;
                         case 2: // 3. 重厚たわみ沈み込み
-                            filterModY = -0.55 * domGain;
+                            filterModY = -0.60 * domGain;
                             break;
                         case 3: // 4. 粒状コロコロ転がり
-                            filterModY = phaseSign * Math.sin(this.animationTime * 8.0 + i) * 0.35 * domGain;
+                            filterModY = phaseSign * Math.sin(this.animationTime * 8.0 + i) * 0.40 * domGain;
                             break;
                         case 4: // 5. 呼吸・脈動プレッシャー
-                            filterModScale = 1.0 + Math.sin(this.animationTime * 4.0) * 0.35 * domGain;
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 4.0) * 0.38 * domGain;
                             break;
                         case 5: // 6. 粘性スライム (Viscous Slime)
-                            filterModY = phaseSign * Math.sin(this.animationTime * 1.5 + i) * 0.45 * domGain;
-                            filterModScale = 1.0 + Math.sin(this.animationTime * 1.5) * 0.3 * domGain;
+                            filterModY = phaseSign * Math.sin(this.animationTime * 1.5 + i) * 0.50 * domGain;
+                            filterModScale = 1.0 + Math.sin(this.animationTime * 1.5) * 0.33 * domGain;
                             break;
                         case 6: // 7. 振り子スイング
-                            filterModY = Math.sin(this.animationTime * 2.5 + i * 1.2) * 0.4 * domGain;
+                            filterModY = Math.sin(this.animationTime * 2.5 + i * 1.2) * 0.44 * domGain;
                             break;
                         case 7: // 8. 水滴散乱
-                            filterModY = (Math.random() - 0.5) * 0.35 * domGain;
+                            filterModY = (Math.random() - 0.5) * 0.40 * domGain;
                             break;
                         case 8: // 9. 粒子高周波ジッター
-                            filterModY = Math.sin(this.animationTime * 35.0 + i * 11.0) * 0.25 * domGain;
+                            filterModY = Math.sin(this.animationTime * 35.0 + i * 11.0) * 0.28 * domGain;
                             break;
                         case 9: // 10. 一方通行直線スライド
-                            targetX += domGain * 1.2 * Math.sin(this.animationTime * 1.8);
+                            targetX += domGain * 1.3 * Math.sin(this.animationTime * 1.8);
                             break;
                     }
 
                     targetX *= filterModScale;
                     targetZ *= filterModScale;
 
-                    // Strictly subdued relative height Y
-                    const relHeightY = (phaseSign * ch2MotorY * 0.4 + filterModY) * this.amplitudeScale;
+                    // Released relative height Y (+10%)
+                    const relHeightY = (phaseSign * ch2MotorY * 0.44 + filterModY) * this.amplitudeScale;
                     const springStiffness = 3.5;
 
                     this.forces[i].x += (flightX + targetX - pos.x) * springStiffness;
@@ -422,7 +422,7 @@ class OnomaPetPhysics {
                 if (isPlosive && moraProgress < 0.15 && !nodeMora.isPause) {
                     const burstProgress = moraProgress / 0.15;
                     const burstEnv = Math.sin(burstProgress * Math.PI) * Math.exp(-burstProgress * 2.5);
-                    const burstF = burstEnv * forceAmp * 0.6;
+                    const burstF = burstEnv * forceAmp * 0.66;
                     this.forces[i].y += burstF;
                 }
 
@@ -440,8 +440,8 @@ class OnomaPetPhysics {
                 this.currentPositions[i].y += this.velocities[i].y * dt;
                 this.currentPositions[i].z += this.velocities[i].z * dt;
 
-                // --- 5. TIGHT Y-AXIS BOUNDARY CONSTRAINT (Y軸上下はみ出し絶対防止: [-1.3, +1.3]) ---
-                const maxAbsY = 1.3;
+                // --- 5. TIGHT HEIGHT BOUNDARY CONSTRAINT (高さの1割解放: [-1.45, +1.45]) ---
+                const maxAbsY = 1.45;
                 if (this.currentPositions[i].y > maxAbsY) {
                     this.currentPositions[i].y = maxAbsY;
                     this.velocities[i].y *= 0.2;
