@@ -29,24 +29,27 @@
         }
 
         body {
-            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
-            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
             color: var(--text-primary);
-            overflow: hidden;
-            height: 100vh;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            overflow-y: auto; /* Single global page scrollbar */
             display: flex;
             flex-direction: column;
         }
 
-        /* Top Header Control Bar */
+        /* Header Bar */
         header {
-            height: 64px;
-            background: rgba(15, 23, 42, 0.95);
+            background: var(--panel-bg);
             border-bottom: 1px solid var(--panel-border);
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            position: sticky;
+            top: 0;
             z-index: 100;
             backdrop-filter: blur(12px);
         }
@@ -174,7 +177,6 @@
         .workspace {
             display: flex;
             flex: 1;
-            overflow: hidden;
             position: relative;
         }
 
@@ -187,7 +189,6 @@
             flex-direction: column;
             padding: 16px;
             gap: 16px;
-            overflow-y: auto;
             backdrop-filter: blur(10px);
         }
 
@@ -304,13 +305,11 @@
         .ten-variations-section {
             background: rgba(15, 23, 42, 0.95);
             border-top: 1px solid var(--panel-border);
-            padding: 12px 20px;
+            padding: 16px 24px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             z-index: 90;
-            max-height: 220px;
-            overflow-y: auto;
         }
 
         .gallery-title {
@@ -480,13 +479,13 @@
 
         <!-- Right Viewport: 3D Mesh + Seismograph Canvas -->
         <div class="seismograph-container" style="display: flex; flex-direction: column;">
-            <!-- Top Viewport: 3D 4-Node Inter-Particle Elastic Mesh -->
-            <div style="height: 220px; position: relative; background: #0b0c10; border-bottom: 1px solid var(--panel-border);">
+            <!-- Top Viewport: 3D 5-Node Inter-Particle Elastic Mesh -->
+            <div style="height: 380px; min-height: 380px; position: relative; background: #0b0c10; border-bottom: 1px solid var(--panel-border);">
                 <canvas id="mesh3d-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
             </div>
 
             <!-- Bottom Viewport: Multi-Channel Seismograph Chart -->
-            <div style="flex: 1; position: relative;">
+            <div style="height: 480px; min-height: 480px; position: relative;">
                 <canvas id="seismograph-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
 
                 <!-- Bottom Floating Control Bar -->

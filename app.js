@@ -13,7 +13,7 @@ function initApp() {
     const dictData = typeof ONOMA_DICT !== 'undefined' ? ONOMA_DICT : [];
     engine = new OnomaPetEngine({
         dictionaryData: dictData,
-        nodeCount: 4,
+        nodeCount: 5,
         historyDuration: 15.0
     });
 

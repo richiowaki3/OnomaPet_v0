@@ -29,35 +29,23 @@ class OnomaPetPhysics {
     }
 
     initTopology(count) {
-        this.nodeCount = count;
+        this.nodeCount = count || 5;
         this.baselinePositions = [];
         this.currentPositions = [];
         this.velocities = [];
         this.forces = [];
 
-        if (count === 4) {
-            const r = 2.0 * this.spatialScale;
-            this.baselinePositions = [
-                { x: -r, y: 0, z: -r },
-                { x:  r, y: 0, z: -r },
-                { x:  r, y: 0, z:  r },
-                { x: -r, y: 0, z:  r }
-            ];
-        } else if (count === 1) {
-            this.baselinePositions = [{ x: 0, y: 0, z: 0 }];
-        } else {
-            const radius = 2.0 * this.spatialScale;
-            for (let i = 0; i < count; i++) {
-                const angle = (i / count) * Math.PI * 2;
-                this.baselinePositions.push({
-                    x: Math.cos(angle) * radius,
-                    y: 0,
-                    z: Math.sin(angle) * radius
-                });
-            }
-        }
+        // 5 Nodes: N0 at Center (0,0,0) + N1..N4 Surface Plane Perimeter
+        const r = 2.2 * this.spatialScale;
+        this.baselinePositions = [
+            { x: 0, y: 0, z: 0 },    // N0: Center Flight Trajectory (CH-1)
+            { x: -r, y: 0, z: -r },  // N1: Surface Node 1
+            { x:  r, y: 0, z: -r },  // N2: Surface Node 2
+            { x:  r, y: 0, z:  r },  // N3: Surface Node 3
+            { x: -r, y: 0, z:  r }   // N4: Surface Node 4
+        ];
 
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < this.nodeCount; i++) {
             this.currentPositions.push({ ...this.baselinePositions[i] });
             this.velocities.push({ x: 0, y: 0, z: 0 });
             this.forces.push({ x: 0, y: 0, z: 0 });
@@ -307,22 +295,8 @@ class OnomaPetPhysics {
                     }
                 }
 
-                // --- CH-1 Insect Wing Kinematic Flight Engine (昆虫飛翔・羽運動 CH-1 モデル) ---
-                const spaceRatio = sp / 9.0;
+                // --- CH-1 Insect Wing Kinematic Flight Engine & 5-Node Geometry ---
                 const forceAmp = (8.0 + w * 18.0) * nodeMora.accentFactor * this.amplitudeScale;
-                const driveY = driveEnvelope * forceAmp * 0.4;
-
-                const diamondK = (hd / 9.0) * 0.42 * Math.sin(this.animationTime * 3.0);
-                const rectK = (nodeMora.isLong ? 0.38 : 0.18) * Math.sin(this.animationTime * 2.0);
-                const shearK = (1.0 - spaceRatio) * 0.35 * Math.cos(this.animationTime * 2.5);
-
-                let targetX = base.x * (1.0 + diamondK);
-                let targetZ = base.z * (1.0 - diamondK);
-                targetX *= (1.0 + rectK);
-                targetZ *= (1.0 - rectK);
-                targetX += targetZ * shearK;
-
-                // Insect 3D Trajectory Modes
                 const wordText = (this.activeWord && this.activeWord.word) ? this.activeWord.word : '';
                 const isButterfly = /[ふわひらゆらさらフワヒラユラサラー]/.test(wordText) || (t_att < 5 && hd < 5);
                 const isBee = /[ぶんころがたぽろブンコロガタポロ]/.test(wordText) || (rg >= 6 && hd >= 6);
@@ -354,16 +328,33 @@ class OnomaPetPhysics {
 
                 this.activeFlightMode = flightMode;
 
-                // Apply Wing Flapping Offset to Left Wing (N0,N3) vs Right Wing (N1,N2)
-                const isLeftWing = (i === 0 || i === 3);
-                const wingY = isLeftWing ? wingFlap * 1.2 : -wingFlap * 1.2;
+                if (i === 0) {
+                    // N0: Center 3D Trajectory Flight Node (CH-1 Driver)
+                    this.forces[i].x += (flightX - pos.x) * 3.0;
+                    this.forces[i].y += (flightY - pos.y) * 3.0;
+                    this.forces[i].z += (flightZ - pos.z) * 3.0;
+                    primaryDrivingY = flightY;
+                } else {
+                    // N1..N4: 4 Surface Plane Nodes surrounding N0
+                    const spaceRatio = sp / 9.0;
+                    const diamondK = (hd / 9.0) * 0.42 * Math.sin(this.animationTime * 3.0);
+                    const rectK = (nodeMora.isLong ? 0.38 : 0.18) * Math.sin(this.animationTime * 2.0);
+                    const shearK = (1.0 - spaceRatio) * 0.35 * Math.cos(this.animationTime * 2.5);
 
-                // Apply 3D Center Flight Trajectory + Geometric Target Springs
-                this.forces[i].x += (flightX + targetX - pos.x) * 2.5;
-                this.forces[i].y += (flightY + wingY + driveY - pos.y) * 2.5;
-                this.forces[i].z += (flightZ + targetZ - pos.z) * 2.5;
+                    let targetX = base.x * (1.0 + diamondK);
+                    let targetZ = base.z * (1.0 - diamondK);
+                    targetX *= (1.0 + rectK);
+                    targetZ *= (1.0 - rectK);
+                    targetX += targetZ * shearK;
 
-                if (i === 0) primaryDrivingY = driveY + flightY;
+                    // Relative height offset relative to N0 (flightY)
+                    const relYSign = (i === 1 || i === 3) ? 1.0 : -1.0;
+                    const relHeightY = relYSign * Math.sin(this.animationTime * 4.0 + i) * 0.8 * this.amplitudeScale;
+
+                    this.forces[i].x += (flightX + targetX - pos.x) * 2.2;
+                    this.forces[i].y += (flightY + relHeightY - pos.y) * 2.2;
+                    this.forces[i].z += (flightZ + targetZ - pos.z) * 2.2;
+                }
 
                 // Plosive burst
                 if (isPlosive && moraProgress < 0.15 && !nodeMora.isPause) {

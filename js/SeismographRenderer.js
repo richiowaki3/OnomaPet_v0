@@ -329,56 +329,50 @@ class SeismographRenderer {
                 const trackX = marginX - 30;
                 const pointY = chYMid - this.smoothValues[chIdx] * ch.scale * maxAmp;
 
-                // SPECIAL CH-4 RADIAL EXPANSION DISPLAY (CH-4 広がり・旋回動点ディスプレイ)
+                // CH-4 4-Color Effort Bouncing Points (Weight, Time, Space, Flow)
                 if (ch.id === 'efforts' && activeWord) {
-                    const sp = activeWord.effort ? activeWord.effort.space : 5;
                     const w = activeWord.effort ? activeWord.effort.weight : 5;
+                    const t_att = activeWord.effort ? activeWord.effort.time : 5;
+                    const sp = activeWord.effort ? activeWord.effort.space : 5;
                     const fl = activeWord.effort ? activeWord.effort.flow : 5;
 
-                    const centerX = marginX - 95;
-                    const centerY = chYMid;
-                    const maxR = channelHeight * 0.38;
+                    const effortData = [
+                        { name: 'W', val: w, col: '#ef4444', label: '重さ' },
+                        { name: 'T', val: t_att, col: '#f59e0b', label: '時間' },
+                        { name: 'S', val: sp, col: '#10b981', label: '空間' },
+                        { name: 'F', val: fl, col: '#06b6d4', label: '流動' }
+                    ];
 
-                    // Draw radial background circle
-                    this.ctx.strokeStyle = isPaper ? 'rgba(0,0,0,0.12)' : 'rgba(168, 85, 247, 0.2)';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.beginPath();
-                    this.ctx.arc(centerX, centerY, maxR, 0, Math.PI * 2);
-                    this.ctx.stroke();
+                    const startTrackX = marginX - 110;
+                    const trackSpacing = 22;
 
-                    // Calculate CH-4 Expansion Radius R(t) & Orbit Angle theta(t)
-                    const spaceRatio = (9.0 - sp) / 9.0; // Indirect = High expansion
-                    const expandR = maxR * (0.25 + spaceRatio * 0.65 + (Math.sin(currentTime * 3) * 0.15 * (w / 9.0)));
-                    const angle = currentTime * (1.5 + (9 - fl) * 0.3);
+                    effortData.forEach((eff, eIdx) => {
+                        const eTrackX = startTrackX + eIdx * trackSpacing;
+                        const eValNorm = ((eff.val - 1) / 8.0 - 0.5) * 2.0; // -1 to +1
+                        const ePointY = chYMid - eValNorm * (channelHeight * 0.35);
 
-                    // Render 4 Radial Expanding Points (広がり動点)
-                    for (let pIdx = 0; pIdx < 4; pIdx++) {
-                        const ptAngle = angle + (pIdx * Math.PI / 2);
-                        const ptX = centerX + Math.cos(ptAngle) * expandR;
-                        const ptY = centerY + Math.sin(ptAngle) * expandR;
-
-                        // Radiating vector line from center to expanding point
-                        this.ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+                        // Vertical track guide
+                        this.ctx.strokeStyle = isPaper ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
                         this.ctx.lineWidth = 1;
                         this.ctx.beginPath();
-                        this.ctx.moveTo(centerX, centerY);
-                        this.ctx.lineTo(ptX, ptY);
+                        this.ctx.moveTo(eTrackX, chY0 + 6);
+                        this.ctx.lineTo(eTrackX, chY0 + channelHeight - 6);
                         this.ctx.stroke();
 
-                        // Glowing Radial Moving Point
-                        this.ctx.fillStyle = '#c084fc';
-                        this.ctx.shadowColor = '#c084fc';
+                        // Bouncing Effort Ball
+                        this.ctx.fillStyle = eff.col;
+                        this.ctx.shadowColor = eff.col;
                         this.ctx.shadowBlur = isPaper ? 2 : 6;
                         this.ctx.beginPath();
-                        this.ctx.arc(ptX, ptY, 4, 0, Math.PI * 2);
+                        this.ctx.arc(eTrackX, ePointY, 4, 0, Math.PI * 2);
                         this.ctx.fill();
-                    }
-                    this.ctx.shadowBlur = 0;
+                        this.ctx.shadowBlur = 0;
 
-                    // Radial Label
-                    this.ctx.font = '600 9px monospace';
-                    this.ctx.fillStyle = '#c084fc';
-                    this.ctx.fillText('広がり (R)', centerX - 22, centerY + maxR + 10);
+                        // Effort Label
+                        this.ctx.font = '600 8px monospace';
+                        this.ctx.fillStyle = eff.col;
+                        this.ctx.fillText(`${eff.name}:${eff.val}`, eTrackX - 8, chY0 + channelHeight - 3);
+                    });
                 } else {
                     // Vertical track line for standard channels
                     this.ctx.strokeStyle = isPaper ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)';
