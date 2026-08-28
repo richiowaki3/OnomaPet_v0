@@ -330,30 +330,62 @@ class OnomaPetPhysics {
 
                 if (i === 0) {
                     // N0: Center 3D Trajectory Flight Node (CH-1 Driver)
-                    this.forces[i].x += (flightX - pos.x) * 3.0;
-                    this.forces[i].y += (flightY - pos.y) * 3.0;
-                    this.forces[i].z += (flightZ - pos.z) * 3.0;
+                    this.forces[i].x += (flightX - pos.x) * 3.5;
+                    this.forces[i].y += (flightY - pos.y) * 3.5;
+                    this.forces[i].z += (flightZ - pos.z) * 3.5;
                     primaryDrivingY = flightY;
                 } else {
-                    // N1..N4: 4 Surface Plane Nodes surrounding N0
-                    const spaceRatio = sp / 9.0;
-                    const diamondK = (hd / 9.0) * 0.42 * Math.sin(this.animationTime * 3.0);
-                    const rectK = (nodeMora.isLong ? 0.38 : 0.18) * Math.sin(this.animationTime * 2.0);
-                    const shearK = (1.0 - spaceRatio) * 0.35 * Math.cos(this.animationTime * 2.5);
+                    // --- N1..N4 Surface Plane Nodes: DIRECTLY DRIVEN BY THE 10 KINEMATIC VARIATIONS ---
+                    const vols = (typeof OnomaPetKinematics !== 'undefined' && this.activeWord)
+                        ? OnomaPetKinematics.calculateVolumeMatrix(this.activeWord)
+                        : new Array(10).fill(128);
 
-                    let targetX = base.x * (1.0 + diamondK);
-                    let targetZ = base.z * (1.0 - diamondK);
+                    const v1_burst   = vols[0] / 255.0; // 1. 瞬発衝撃バースト
+                    const v2_swirl   = vols[1] / 255.0; // 2. 旋回うねり波
+                    const v3_sag     = vols[2] / 255.0; // 3. 重厚たわみ沈み込み
+                    const v4_roll    = vols[3] / 255.0; // 4. 粒状コロコロ転がり
+                    const v5_pulse   = vols[4] / 255.0; // 5. 呼吸・脈動プレッシャー
+                    const v6_visc    = vols[5] / 255.0; // 6. 粘性スライム
+                    const v7_swing   = vols[6] / 255.0; // 7. 振り子スイング
+                    const v8_drop    = vols[7] / 255.0; // 8. 水滴散乱
+                    const v9_jitter  = vols[8] / 255.0; // 9. 粒子高周波ジッター
+                    const v10_slide  = vols[9] / 255.0; // 10. 一方通行直線スライド
+
+                    // 1. Radial Expansion & Top-Down Morphing (VOL 5 + VOL 2 + VOL 8 + VOL 10)
+                    const spaceRatio = sp / 9.0;
+                    const pulseExpansion = 1.0 + v5_pulse * 0.75 * Math.sin(this.animationTime * 6.0)
+                                               + v2_swirl * 0.45 * Math.sin(this.animationTime * 3.0 + i)
+                                               + v8_drop * 0.55 * (Math.random() - 0.5);
+
+                    const diamondK = (hd / 9.0) * 0.55 * Math.sin(this.animationTime * 3.5);
+                    const rectK = (nodeMora.isLong ? 0.45 : 0.22) * Math.sin(this.animationTime * 2.5);
+                    const shearK = (1.0 - spaceRatio) * 0.45 * Math.cos(this.animationTime * 2.8);
+
+                    let targetX = base.x * pulseExpansion * (1.0 + diamondK);
+                    let targetZ = base.z * pulseExpansion * (1.0 - diamondK);
                     targetX *= (1.0 + rectK);
                     targetZ *= (1.0 - rectK);
                     targetX += targetZ * shearK;
 
-                    // Relative height offset relative to N0 (flightY)
-                    const relYSign = (i === 1 || i === 3) ? 1.0 : -1.0;
-                    const relHeightY = relYSign * Math.sin(this.animationTime * 4.0 + i) * 0.8 * this.amplitudeScale;
+                    // VOL 10: Directional Slide Offset
+                    targetX += v10_slide * 1.5 * Math.sin(this.animationTime * 2.2);
 
-                    this.forces[i].x += (flightX + targetX - pos.x) * 2.2;
-                    this.forces[i].y += (flightY + relHeightY - pos.y) * 2.2;
-                    this.forces[i].z += (flightZ + targetZ - pos.z) * 2.2;
+                    // 2. Dynamic Vertical Undulation & Impulse (VOL 1 + VOL 2 + VOL 3 + VOL 4 + VOL 7 + VOL 9)
+                    const phaseSign = (i === 1 || i === 3) ? 1.0 : -1.0;
+                    const waveY = phaseSign * Math.sin(this.animationTime * (4.5 + v4_roll * 8.0) + i * 1.5) * (1.2 + v2_swirl * 1.8);
+                    const burstY = phaseSign * driveEnvelope * (2.8 + v1_burst * 5.0);
+                    const sagY = -v3_sag * 3.2; // Deep elastic bowing/sagging
+                    const swingY = Math.sin(this.animationTime * 3.2 + i * 1.2) * v7_swing * 2.2;
+                    const jitterY = (Math.sin(this.animationTime * 50.0 + i * 19.0)) * v9_jitter * 1.5;
+
+                    const relHeightY = (waveY + burstY + sagY + swingY + jitterY) * this.amplitudeScale;
+
+                    // 3. Dynamic Spring Stiffness & Response Damping (Modulated by Viscosity VOL 6 & Burst VOL 1)
+                    const springStiffness = (3.2 + (1.0 - v6_visc) * 4.5 + v1_burst * 4.0);
+
+                    this.forces[i].x += (flightX + targetX - pos.x) * springStiffness;
+                    this.forces[i].y += (flightY + relHeightY - pos.y) * springStiffness;
+                    this.forces[i].z += (flightZ + targetZ - pos.z) * springStiffness;
                 }
 
                 // Plosive burst
